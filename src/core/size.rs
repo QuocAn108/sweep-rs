@@ -1,5 +1,15 @@
 ﻿use std::path::Path;
 
+pub const CLUSTER_SIZE: u64 = 4096;
+
+pub fn allocated_size(len: u64) -> u64 {
+    if len == 0 {
+        0
+    } else {
+        ((len + CLUSTER_SIZE - 1) / CLUSTER_SIZE) * CLUSTER_SIZE
+    }
+}
+
 pub fn compute_dir_size(path: &Path) -> u64 {
     let mut total_size = 0u64;
 
@@ -13,7 +23,7 @@ pub fn compute_dir_size(path: &Path) -> u64 {
                     total_size += compute_dir_size(&entry.path());
                 } else if file_type.is_file() {
                     if let Ok(meta) = entry.metadata() {
-                        total_size += meta.len();
+                        total_size += allocated_size(meta.len());
                     }
                 }
             }
@@ -49,6 +59,15 @@ mod tests {
     use tempfile::tempdir;
 
     #[test]
+    fn test_allocated_size() {
+        assert_eq!(allocated_size(0), 0);
+        assert_eq!(allocated_size(1), 4096);
+        assert_eq!(allocated_size(4096), 4096);
+        assert_eq!(allocated_size(4097), 8192);
+        assert_eq!(allocated_size(8192), 8192);
+    }
+
+    #[test]
     fn test_format_bytes() {
         assert_eq!(format_bytes(500), "500 B");
         assert_eq!(format_bytes(1024), "1.0 KB");
@@ -58,7 +77,7 @@ mod tests {
     }
 
     #[test]
-    fn test_compute_dir_size() {
+    fn test_compute_dir_size_with_blocks() {
         let temp = tempdir().unwrap();
         let sub = temp.path().join("sub");
         std::fs::create_dir(&sub).unwrap();
@@ -69,6 +88,6 @@ mod tests {
         std::fs::write(&file1, "12345").unwrap();
         std::fs::write(&file2, "1234567890").unwrap();
 
-        assert_eq!(compute_dir_size(temp.path()), 15);
+        assert_eq!(compute_dir_size(temp.path()), 4096 * 2);
     }
 }
