@@ -22,6 +22,55 @@ impl std::fmt::Display for ProjectType {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum GitStatus {
+    Stale,
+    Active,
+    Moderate,
+    Unknown,
+}
+
+impl std::fmt::Display for GitStatus {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            GitStatus::Stale => write!(f, "Stale"),
+            GitStatus::Active => write!(f, "Active"),
+            GitStatus::Moderate => write!(f, "Moderate"),
+            GitStatus::Unknown => write!(f, "Unknown"),
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct GitInfo {
+    pub last_commit_days: Option<u64>,
+    pub is_dirty: bool,
+    pub status: GitStatus,
+}
+
+#[allow(dead_code)]
+impl GitInfo {
+    pub fn display_status(&self) -> String {
+        if self.is_dirty {
+            match self.status {
+                GitStatus::Unknown => "Dirty".to_string(),
+                other => format!("{} (Dirty)", other),
+            }
+        } else {
+            self.status.to_string()
+        }
+    }
+
+    pub fn display_last_commit(&self) -> String {
+        match self.last_commit_days {
+            Some(0) => "Today".to_string(),
+            Some(1) => "1 day ago".to_string(),
+            Some(days) => format!("{} days ago", days),
+            None => "N/A".to_string(),
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ArtifactTarget {
     pub name: &'static str,
@@ -37,12 +86,12 @@ pub struct DiscoveredArtifact {
     pub size_bytes: u64,
 }
 
-#[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub struct DiscoveredProject {
     pub root: PathBuf,
     pub project_type: ProjectType,
     pub artifacts: Vec<DiscoveredArtifact>,
+    pub git_info: Option<GitInfo>,
 }
 
 #[allow(dead_code)]
