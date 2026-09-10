@@ -14,6 +14,9 @@ pub struct Args {
     #[arg(short, long, default_value_t = false)]
     pub dry_run: bool,
 
+    #[arg(short, long, num_args = 0..=1, default_missing_value = "30")]
+    pub stale: Option<u64>,
+
     #[arg(short = 't', long = "type", default_value = "all")]
     pub project_type: String,
 
