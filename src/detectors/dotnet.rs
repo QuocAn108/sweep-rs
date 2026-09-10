@@ -1,5 +1,5 @@
-﻿use std::path::{Path, PathBuf};
 use crate::core::traits::{ArtifactTarget, ProjectDetector, ProjectType};
+use std::path::{Path, PathBuf};
 
 #[derive(Debug, Default, Clone)]
 pub struct DotnetDetector;
@@ -18,10 +18,10 @@ impl ProjectDetector for DotnetDetector {
     fn detect(&self, dir: &Path) -> bool {
         if let Ok(entries) = std::fs::read_dir(dir) {
             for entry in entries.flatten() {
-                if let Some(ext) = entry.path().extension() {
-                    if ext == "csproj" || ext == "sln" || ext == "fsproj" {
-                        return true;
-                    }
+                if let Some(ext) = entry.path().extension()
+                    && (ext == "csproj" || ext == "sln" || ext == "fsproj")
+                {
+                    return true;
                 }
             }
         }

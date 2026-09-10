@@ -1,6 +1,6 @@
-﻿use std::path::Path;
-use git2::{Repository, StatusOptions};
 use crate::core::traits::{GitInfo, GitStatus};
+use git2::{Repository, StatusOptions};
+use std::path::Path;
 
 #[allow(dead_code)]
 pub struct GitAnalyzer;

@@ -1,6 +1,6 @@
-﻿use std::path::Path;
-use std::sync::atomic::{AtomicUsize, Ordering};
+use std::path::Path;
 use std::sync::Arc;
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::{Duration, Instant};
 
 use crate::core::size::compute_dir_size;
@@ -47,7 +47,11 @@ impl ScanEngine {
         self
     }
 
-    pub fn scan<F>(&self, root: &Path, on_dir_inspected: Option<F>) -> (Vec<DiscoveredProject>, ScanStats)
+    pub fn scan<F>(
+        &self,
+        root: &Path,
+        on_dir_inspected: Option<F>,
+    ) -> (Vec<DiscoveredProject>, ScanStats)
     where
         F: Fn(usize) + Send + Sync + 'static,
     {
@@ -61,15 +65,12 @@ impl ScanEngine {
             .follow_links(false)
             .skip_hidden(false)
             .process_read_dir(move |_depth, _path, _read_dir_state, children| {
-                for entry_res in children.iter_mut() {
-                    if let Ok(entry) = entry_res {
-                        if entry.file_type.is_dir() {
-                            if let Some(name) = entry.file_name.to_str() {
-                                if PRUNE_DIRS.contains(&name) {
-                                    entry.read_children_path = None;
-                                }
-                            }
-                        }
+                for entry in children.iter_mut().flatten() {
+                    if entry.file_type.is_dir()
+                        && let Some(name) = entry.file_name.to_str()
+                        && PRUNE_DIRS.contains(&name)
+                    {
+                        entry.read_children_path = None;
                     }
                 }
             });
@@ -82,10 +83,10 @@ impl ScanEngine {
 
             if entry.file_type.is_dir() {
                 let current_dirs = dirs_count_clone.fetch_add(1, Ordering::Relaxed) + 1;
-                if let Some(ref cb) = on_dir_inspected {
-                    if current_dirs % 50 == 0 {
-                        cb(current_dirs);
-                    }
+                if let Some(ref cb) = on_dir_inspected
+                    && current_dirs.is_multiple_of(50)
+                {
+                    cb(current_dirs);
                 }
 
                 let dir_path = entry.path();
@@ -180,12 +181,18 @@ mod tests {
         assert_eq!(projects.len(), 2);
         assert!(stats.dirs_inspected >= 2);
 
-        let rust_proj = projects.iter().find(|p| p.project_type == ProjectType::Rust).unwrap();
+        let rust_proj = projects
+            .iter()
+            .find(|p| p.project_type == ProjectType::Rust)
+            .unwrap();
         assert_eq!(rust_proj.artifacts.len(), 1);
         assert_eq!(rust_proj.artifacts[0].target.name, "target");
         assert_eq!(rust_proj.artifacts[0].size_bytes, 4096);
 
-        let node_proj = projects.iter().find(|p| p.project_type == ProjectType::Node).unwrap();
+        let node_proj = projects
+            .iter()
+            .find(|p| p.project_type == ProjectType::Node)
+            .unwrap();
         assert_eq!(node_proj.artifacts.len(), 1);
         assert_eq!(node_proj.artifacts[0].target.name, "node_modules");
         assert_eq!(node_proj.artifacts[0].size_bytes, 4096 * 2);

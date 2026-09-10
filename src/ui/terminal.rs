@@ -1,7 +1,7 @@
-﻿use console::{pad_str, style, Alignment};
 use crate::core::engine::ScanStats;
 use crate::core::size::format_bytes;
 use crate::core::traits::{DiscoveredProject, GitStatus};
+use console::{Alignment, pad_str, style};
 
 pub fn print_scan_header(path_str: &str, stats: &ScanStats) {
     println!(
@@ -22,11 +22,36 @@ pub fn print_projects_table(projects: &[DiscoveredProject]) {
 
     println!(
         "{} {} {} {} {}",
-        pad_str(&style("PROJECT PATH").bold().underlined().to_string(), 38, Alignment::Left, None),
-        pad_str(&style("TYPE").bold().underlined().to_string(), 8, Alignment::Left, None),
-        pad_str(&style("LAST COMMIT").bold().underlined().to_string(), 15, Alignment::Left, None),
-        pad_str(&style("STATUS").bold().underlined().to_string(), 18, Alignment::Left, None),
-        pad_str(&style("RECLAIMABLE").bold().underlined().to_string(), 12, Alignment::Right, None)
+        pad_str(
+            &style("PROJECT PATH").bold().underlined().to_string(),
+            38,
+            Alignment::Left,
+            None
+        ),
+        pad_str(
+            &style("TYPE").bold().underlined().to_string(),
+            8,
+            Alignment::Left,
+            None
+        ),
+        pad_str(
+            &style("LAST COMMIT").bold().underlined().to_string(),
+            15,
+            Alignment::Left,
+            None
+        ),
+        pad_str(
+            &style("STATUS").bold().underlined().to_string(),
+            18,
+            Alignment::Left,
+            None
+        ),
+        pad_str(
+            &style("RECLAIMABLE").bold().underlined().to_string(),
+            12,
+            Alignment::Right,
+            None
+        )
     );
 
     let mut total_bytes = 0u64;
@@ -68,7 +93,10 @@ pub fn print_projects_table(projects: &[DiscoveredProject]) {
 
                 (s_commit, s_status)
             }
-            None => (style("N/A".to_string()).dim(), style("No Git".to_string()).dim()),
+            None => (
+                style("N/A".to_string()).dim(),
+                style("No Git".to_string()).dim(),
+            ),
         };
 
         let project_bytes: u64 = project.artifacts.iter().map(|a| a.size_bytes).sum();

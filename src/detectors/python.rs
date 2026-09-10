@@ -1,5 +1,5 @@
-﻿use std::path::{Path, PathBuf};
 use crate::core::traits::{ArtifactTarget, ProjectDetector, ProjectType};
+use std::path::{Path, PathBuf};
 
 #[derive(Debug, Default, Clone)]
 pub struct PythonDetector;

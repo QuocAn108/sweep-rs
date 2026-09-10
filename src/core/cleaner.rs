@@ -1,5 +1,5 @@
-﻿use std::path::{Path, PathBuf};
-use anyhow::{anyhow, Context, Result};
+use anyhow::{Context, Result, anyhow};
+use std::path::{Path, PathBuf};
 use uuid::Uuid;
 
 pub const WHITELIST_ARTIFACT_NAMES: &[&str] = &[
@@ -97,7 +97,9 @@ impl Cleaner {
                             item.trash_path.display(),
                             e
                         );
-                        report.errors.push(format!("{}: {}", item.trash_path.display(), e));
+                        report
+                            .errors
+                            .push(format!("{}: {}", item.trash_path.display(), e));
                     }
                 }
             }

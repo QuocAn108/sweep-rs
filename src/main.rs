@@ -1,23 +1,17 @@
-mod cli;
-mod core;
-mod detectors;
-mod git;
-mod ui;
-
-use std::path::PathBuf;
-use std::time::Duration;
 use anyhow::{Context, Result};
 use clap::Parser;
 use console::style;
 use indicatif::{ProgressBar, ProgressStyle};
+use std::path::PathBuf;
+use std::time::Duration;
 
-use crate::cli::args::Args;
-use crate::core::cleaner::Cleaner;
-use crate::core::engine::ScanEngine;
-use crate::core::size::format_bytes;
-use crate::detectors::DetectorRegistry;
-use crate::ui::terminal::{print_projects_table, print_scan_header};
-use crate::ui::tui::{prompt_selection, SelectableArtifact};
+use sweep_rs::cli::args::Args;
+use sweep_rs::core::cleaner::Cleaner;
+use sweep_rs::core::engine::ScanEngine;
+use sweep_rs::core::size::format_bytes;
+use sweep_rs::detectors::DetectorRegistry;
+use sweep_rs::ui::terminal::{print_projects_table, print_scan_header};
+use sweep_rs::ui::tui::{SelectableArtifact, prompt_selection};
 
 fn main() -> Result<()> {
     let args = Args::parse();
@@ -67,7 +61,7 @@ fn main() -> Result<()> {
     spinner.finish_and_clear();
 
     if args.tui {
-        return ui::tui::run_tui_app(projects, stats, args.dry_run);
+        return sweep_rs::ui::tui::run_tui_app(projects, stats, args.dry_run);
     }
 
     print_scan_header(&target_path.display().to_string(), &stats);
