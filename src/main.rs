@@ -1,4 +1,4 @@
-﻿mod cli;
+mod cli;
 mod core;
 mod detectors;
 mod git;
@@ -47,7 +47,7 @@ fn main() -> Result<()> {
     let spinner = ProgressBar::new_spinner();
     spinner.set_style(
         ProgressStyle::default_spinner()
-            .tick_chars("â ‹â ™â ¹â ¸â ¼â ´â ¦â §â ‡â ")
+            .tick_chars("⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏")
             .template("{spinner:.green} {msg}")
             .unwrap_or_else(|_| ProgressStyle::default_spinner()),
     );
@@ -66,6 +66,10 @@ fn main() -> Result<()> {
 
     spinner.finish_and_clear();
 
+    if args.tui {
+        return ui::tui::run_tui_app(projects, stats, args.dry_run);
+    }
+
     print_scan_header(&target_path.display().to_string(), &stats);
     print_projects_table(&projects);
 
@@ -73,6 +77,7 @@ fn main() -> Result<()> {
         return Ok(());
     }
 
+    // Dry run check
     if args.dry_run {
         println!(
             "{} Dry-run mode enabled. No files were deleted.",
@@ -81,6 +86,7 @@ fn main() -> Result<()> {
         return Ok(());
     }
 
+    // Determine artifacts to clean
     let to_clean: Vec<SelectableArtifact> = if args.force {
         println!(
             "{}",
@@ -108,6 +114,7 @@ fn main() -> Result<()> {
         return Ok(());
     }
 
+    // Execute Safe & Fast Deletion
     let cleaner = Cleaner::new();
     let mut renamed_items = Vec::new();
 
@@ -122,10 +129,11 @@ fn main() -> Result<()> {
         return Ok(());
     }
 
+    // Background purge with spinner
     let purge_spinner = ProgressBar::new_spinner();
     purge_spinner.set_style(
         ProgressStyle::default_spinner()
-            .tick_chars("â ‹â ™â ¹â ¸â ¼â ´â ¦â §â ‡â ")
+            .tick_chars("⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏")
             .template("{spinner:.green} {msg}")
             .unwrap_or_else(|_| ProgressStyle::default_spinner()),
     );
@@ -139,7 +147,7 @@ fn main() -> Result<()> {
 
     println!(
         "\n{} Successfully reclaimed {} across {} artifact(s)!\n",
-        style("âœ”").green().bold(),
+        style("✔").green().bold(),
         style(format_bytes(report.total_bytes_reclaimed))
             .green()
             .bold(),
