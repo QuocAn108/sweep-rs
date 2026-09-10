@@ -1,0 +1,68 @@
+name: Release & Packaging
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: write
+
+jobs:
+  build-release:
+    name: Build binary for ${{ matrix.target }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            artifact_name: sweep-rs-linux-x86_64.tar.gz
+            binary_name: sweep-rs
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            artifact_name: sweep-rs-windows-x86_64.zip
+            binary_name: sweep-rs.exe
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            artifact_name: sweep-rs-macos-arm64.tar.gz
+            binary_name: sweep-rs
+          - os: macos-13
+            target: x86_64-apple-darwin
+            artifact_name: sweep-rs-macos-x86_64.tar.gz
+            binary_name: sweep-rs
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Build optimized release binary
+        run: cargo build --release --target ${{ matrix.target }}
+
+      - name: Package binary (Windows)
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          Compress-Archive -Path "target/${{ matrix.target }}/release/${{ matrix.binary_name }}" -DestinationPath "${{ matrix.artifact_name }}"
+          Get-FileHash -Algorithm SHA256 "${{ matrix.artifact_name }}" | Out-File "${{ matrix.artifact_name }}.sha256"
+
+      - name: Package binary (Unix)
+        if: matrix.os != 'windows-latest'
+        run: |
+          tar -czf "${{ matrix.artifact_name }}" -C "target/${{ matrix.target }}/release" "${{ matrix.binary_name }}"
+          shasum -a 256 "${{ matrix.artifact_name }}" > "${{ matrix.artifact_name }}.sha256"
+
+      - name: Upload binaries to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            ${{ matrix.artifact_name }}
+            ${{ matrix.artifact_name }}.sha256
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
