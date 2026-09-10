@@ -12,9 +12,12 @@ use console::style;
 use indicatif::{ProgressBar, ProgressStyle};
 
 use crate::cli::args::Args;
+use crate::core::cleaner::Cleaner;
 use crate::core::engine::ScanEngine;
+use crate::core::size::format_bytes;
 use crate::detectors::DetectorRegistry;
 use crate::ui::terminal::{print_projects_table, print_scan_header};
+use crate::ui::tui::{prompt_selection, SelectableArtifact};
 
 fn main() -> Result<()> {
     let args = Args::parse();
@@ -65,6 +68,94 @@ fn main() -> Result<()> {
 
     print_scan_header(&target_path.display().to_string(), &stats);
     print_projects_table(&projects);
+
+    if projects.is_empty() {
+        return Ok(());
+    }
+
+    if args.dry_run {
+        println!(
+            "{} Dry-run mode enabled. No files were deleted.",
+            style("[DRY-RUN]").cyan().bold()
+        );
+        return Ok(());
+    }
+
+    let to_clean: Vec<SelectableArtifact> = if args.force {
+        println!(
+            "{}",
+            style("[FORCE] Skipping confirmation prompt. Proceeding with deletion...").yellow()
+        );
+        projects
+            .iter()
+            .flat_map(|p| {
+                p.artifacts.iter().map(move |a| SelectableArtifact {
+                    project_root: p.root.clone(),
+                    project_type: p.project_type.clone(),
+                    artifact_path: a.abs_path.clone(),
+                    artifact_name: a.target.name,
+                    size_bytes: a.size_bytes,
+                    git_info: p.git_info.clone(),
+                })
+            })
+            .collect()
+    } else {
+        prompt_selection(&projects)?
+    };
+
+    if to_clean.is_empty() {
+        println!("{}", style("No artifacts selected. Exiting safely.").dim());
+        return Ok(());
+    }
+
+    let cleaner = Cleaner::new();
+    let mut renamed_items = Vec::new();
+
+    for item in to_clean {
+        match cleaner.rename_to_trash(&item.artifact_path, item.size_bytes) {
+            Ok(clean_item) => renamed_items.push(clean_item),
+            Err(e) => eprintln!("{} {}", style("Error:").red().bold(), e),
+        }
+    }
+
+    if renamed_items.is_empty() {
+        return Ok(());
+    }
+
+    let purge_spinner = ProgressBar::new_spinner();
+    purge_spinner.set_style(
+        ProgressStyle::default_spinner()
+            .tick_chars("â ‹â ™â ¹â ¸â ¼â ´â ¦â §â ‡â ")
+            .template("{spinner:.green} {msg}")
+            .unwrap_or_else(|_| ProgressStyle::default_spinner()),
+    );
+    purge_spinner.set_message("Purging trash files in background...");
+    purge_spinner.enable_steady_tick(Duration::from_millis(80));
+
+    let handle = cleaner.purge_items_in_background(renamed_items);
+    let report = handle.join().expect("Cleaner worker thread panicked");
+
+    purge_spinner.finish_and_clear();
+
+    println!(
+        "\n{} Successfully reclaimed {} across {} artifact(s)!\n",
+        style("âœ”").green().bold(),
+        style(format_bytes(report.total_bytes_reclaimed))
+            .green()
+            .bold(),
+        report.items_cleaned
+    );
+
+    if !report.errors.is_empty() {
+        eprintln!(
+            "{} Encounted {} errors during deletion:",
+            style("Warning:").yellow().bold(),
+            report.errors.len()
+        );
+        for err in report.errors {
+            eprintln!("  - {}", err);
+        }
+    }
 
     Ok(())
 }
