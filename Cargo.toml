@@ -15,10 +15,12 @@ rayon = "1.10"
 # Git Introspection
 git2 = { version = "0.19", default-features = false, features = [] }
 
-# Terminal UX
+# Terminal UX & TUI
 indicatif = { version = "0.17", features = ["rayon"] }
 console = "0.15"
 inquire = "0.7"
+ratatui = "0.28"
+crossterm = "0.28"
 
 # Error Handling & Utilities
 anyhow = "1.0"
