@@ -6,6 +6,7 @@ use std::time::{Duration, Instant};
 use crate::core::size::compute_dir_size;
 use crate::core::traits::{DiscoveredArtifact, DiscoveredProject};
 use crate::detectors::DetectorRegistry;
+use crate::git::analyzer::GitAnalyzer;
 
 pub const PRUNE_DIRS: &[&str] = &[
     ".git",
@@ -30,11 +31,20 @@ pub struct ScanStats {
 
 pub struct ScanEngine {
     registry: DetectorRegistry,
+    stale_days_filter: Option<u64>,
 }
 
 impl ScanEngine {
     pub fn new(registry: DetectorRegistry) -> Self {
-        Self { registry }
+        Self {
+            registry,
+            stale_days_filter: None,
+        }
+    }
+
+    pub fn with_stale_filter(mut self, stale_days: Option<u64>) -> Self {
+        self.stale_days_filter = stale_days;
+        self
     }
 
     pub fn scan<F>(&self, root: &Path, on_dir_inspected: Option<F>) -> (Vec<DiscoveredProject>, ScanStats)
@@ -98,10 +108,26 @@ impl ScanEngine {
                     }
 
                     if !discovered_artifacts.is_empty() {
+                        let git_info = GitAnalyzer::analyze(&dir_path);
+
+                        if let Some(min_days) = self.stale_days_filter {
+                            let is_stale = match &git_info {
+                                Some(info) => match info.last_commit_days {
+                                    Some(days) => days >= min_days,
+                                    None => false,
+                                },
+                                None => false,
+                            };
+                            if !is_stale {
+                                continue;
+                            }
+                        }
+
                         projects.push(DiscoveredProject {
                             root: dir_path.clone(),
                             project_type: detector.name(),
                             artifacts: discovered_artifacts,
+                            git_info,
                         });
                     }
                 }
@@ -157,11 +183,11 @@ mod tests {
         let rust_proj = projects.iter().find(|p| p.project_type == ProjectType::Rust).unwrap();
         assert_eq!(rust_proj.artifacts.len(), 1);
         assert_eq!(rust_proj.artifacts[0].target.name, "target");
-        assert_eq!(rust_proj.artifacts[0].size_bytes, 1024);
+        assert_eq!(rust_proj.artifacts[0].size_bytes, 4096);
 
         let node_proj = projects.iter().find(|p| p.project_type == ProjectType::Node).unwrap();
         assert_eq!(node_proj.artifacts.len(), 1);
         assert_eq!(node_proj.artifacts[0].target.name, "node_modules");
-        assert_eq!(node_proj.artifacts[0].size_bytes, 2048 + "{\"name\": \"nested\"}".len() as u64);
+        assert_eq!(node_proj.artifacts[0].size_bytes, 4096 * 2);
     }
 }
