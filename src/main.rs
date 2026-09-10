@@ -51,7 +51,7 @@ fn main() -> Result<()> {
     spinner.set_message(format!("Scanning {}...", target_path.display()));
     spinner.enable_steady_tick(Duration::from_millis(80));
 
-    let engine = ScanEngine::new(registry);
+    let engine = ScanEngine::new(registry).with_stale_filter(args.stale);
     let sp = spinner.clone();
 
     let (projects, stats) = engine.scan(
