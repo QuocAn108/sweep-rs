@@ -1,14 +1,14 @@
-﻿pub mod dotnet;
+pub mod dotnet;
 pub mod node;
 pub mod python;
 pub mod rust;
 
-use std::path::Path;
-use crate::core::traits::ProjectDetector;
 use self::dotnet::DotnetDetector;
 use self::node::NodeDetector;
 use self::python::PythonDetector;
 use self::rust::RustDetector;
+use crate::core::traits::ProjectDetector;
+use std::path::Path;
 
 pub struct DetectorRegistry {
     detectors: Vec<Box<dyn ProjectDetector>>,
@@ -57,9 +57,10 @@ impl DetectorRegistry {
         &self.detectors
     }
 
-    pub fn detect_all<'a>(&'a self, dir: &Path) -> Vec<&'a Box<dyn ProjectDetector>> {
+    pub fn detect_all<'a>(&'a self, dir: &Path) -> Vec<&'a dyn ProjectDetector> {
         self.detectors
             .iter()
+            .map(|d| d.as_ref())
             .filter(|d| d.detect(dir))
             .collect()
     }

@@ -7,9 +7,10 @@ use anyhow::Result;
 use crossterm::event::{self, Event, KeyCode, KeyEventKind};
 use crossterm::execute;
 use crossterm::terminal::{
-    disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen,
+    EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode,
 };
 use inquire::MultiSelect;
+use ratatui::Frame;
 use ratatui::backend::CrosstermBackend;
 use ratatui::layout::{Alignment, Constraint, Direction, Layout, Rect};
 use ratatui::style::{Color, Modifier, Style};
@@ -18,7 +19,6 @@ use ratatui::widgets::{
     Block, BorderType, Borders, Clear, Gauge, HighlightSpacing, Paragraph, Row, Table, TableState,
     Wrap,
 };
-use ratatui::Frame;
 
 use crate::core::cleaner::Cleaner;
 use crate::core::engine::ScanStats;
@@ -135,10 +135,11 @@ impl TuiApp {
     pub fn new(projects: Vec<DiscoveredProject>, stats: ScanStats, dry_run: bool) -> Self {
         let mut selected = HashSet::new();
         for (i, p) in projects.iter().enumerate() {
-            if let Some(ref git) = p.git_info {
-                if git.status == GitStatus::Stale && !git.is_dirty {
-                    selected.insert(i);
-                }
+            if let Some(ref git) = p.git_info
+                && git.status == GitStatus::Stale
+                && !git.is_dirty
+            {
+                selected.insert(i);
             }
         }
 
@@ -230,7 +231,9 @@ impl TuiApp {
         if self.dry_run {
             self.notification_message = Some((
                 "[DRY-RUN] Clean simulated: No files were touched.".to_string(),
-                Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD),
+                Style::default()
+                    .fg(Color::Cyan)
+                    .add_modifier(Modifier::BOLD),
             ));
             return;
         }
@@ -288,7 +291,9 @@ impl TuiApp {
                     report.items_cleaned,
                     format_bytes(report.total_bytes_reclaimed)
                 ),
-                Style::default().fg(Color::Green).add_modifier(Modifier::BOLD),
+                Style::default()
+                    .fg(Color::Green)
+                    .add_modifier(Modifier::BOLD),
             ));
         }
     }
@@ -331,45 +336,42 @@ fn run_app_loop(
             break;
         }
 
-        if event::poll(Duration::from_millis(50))? {
-            if let Event::Key(key) = event::read()? {
-                if key.kind == KeyEventKind::Press {
-                    if app.show_confirm_dialog {
-                        match key.code {
-                            KeyCode::Char('y') | KeyCode::Enter => {
-                                app.show_confirm_dialog = false;
-                                app.perform_clean();
-                            }
-                            KeyCode::Char('n') | KeyCode::Esc => {
-                                app.show_confirm_dialog = false;
-                            }
-                            _ => {}
-                        }
-                    } else {
-                        match key.code {
-                            KeyCode::Char('q') | KeyCode::Esc => {
-                                app.should_quit = true;
-                            }
-                            KeyCode::Up | KeyCode::Char('k') => {
-                                app.move_up();
-                            }
-                            KeyCode::Down | KeyCode::Char('j') => {
-                                app.move_down();
-                            }
-                            KeyCode::Char(' ') => {
-                                app.toggle_selection();
-                            }
-                            KeyCode::Char('a') => {
-                                app.toggle_all();
-                            }
-                            KeyCode::Char('d') => {
-                                if !app.selected_indices.is_empty() {
-                                    app.show_confirm_dialog = true;
-                                }
-                            }
-                            _ => {}
-                        }
+        if event::poll(Duration::from_millis(50))?
+            && let Event::Key(key) = event::read()?
+            && key.kind == KeyEventKind::Press
+        {
+            if app.show_confirm_dialog {
+                match key.code {
+                    KeyCode::Char('y') | KeyCode::Enter => {
+                        app.show_confirm_dialog = false;
+                        app.perform_clean();
                     }
+                    KeyCode::Char('n') | KeyCode::Esc => {
+                        app.show_confirm_dialog = false;
+                    }
+                    _ => {}
+                }
+            } else {
+                match key.code {
+                    KeyCode::Char('q') | KeyCode::Esc => {
+                        app.should_quit = true;
+                    }
+                    KeyCode::Up | KeyCode::Char('k') => {
+                        app.move_up();
+                    }
+                    KeyCode::Down | KeyCode::Char('j') => {
+                        app.move_down();
+                    }
+                    KeyCode::Char(' ') => {
+                        app.toggle_selection();
+                    }
+                    KeyCode::Char('a') => {
+                        app.toggle_all();
+                    }
+                    KeyCode::Char('d') if !app.selected_indices.is_empty() => {
+                        app.show_confirm_dialog = true;
+                    }
+                    _ => {}
                 }
             }
         }
@@ -395,7 +397,10 @@ fn draw_ui(f: &mut Frame, app: &mut TuiApp) {
     let header_text = vec![Line::from(vec![
         Span::styled(
             " SWEEP-RS ",
-            Style::default().fg(Color::Black).bg(Color::Cyan).add_modifier(Modifier::BOLD),
+            Style::default()
+                .fg(Color::Black)
+                .bg(Color::Cyan)
+                .add_modifier(Modifier::BOLD),
         ),
         Span::raw(" High-Performance Git-Aware Workspace Cleaner  "),
         Span::styled(
@@ -481,7 +486,9 @@ fn draw_table(f: &mut Frame, app: &mut TuiApp, area: Rect) {
                 Span::styled(
                     check_mark,
                     if is_selected {
-                        Style::default().fg(Color::Green).add_modifier(Modifier::BOLD)
+                        Style::default()
+                            .fg(Color::Green)
+                            .add_modifier(Modifier::BOLD)
                     } else {
                         Style::default().fg(Color::DarkGray)
                     },
@@ -491,7 +498,9 @@ fn draw_table(f: &mut Frame, app: &mut TuiApp, area: Rect) {
                 Span::styled(status_cell.text, status_style),
                 Span::styled(
                     format_bytes(p.total_reclaimable_bytes()),
-                    Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD),
+                    Style::default()
+                        .fg(Color::Yellow)
+                        .add_modifier(Modifier::BOLD),
                 ),
             ])
         })
@@ -499,7 +508,10 @@ fn draw_table(f: &mut Frame, app: &mut TuiApp, area: Rect) {
 
     let header = Row::new(vec![
         Span::styled("SEL", Style::default().add_modifier(Modifier::BOLD)),
-        Span::styled("PROJECT PATH", Style::default().add_modifier(Modifier::BOLD)),
+        Span::styled(
+            "PROJECT PATH",
+            Style::default().add_modifier(Modifier::BOLD),
+        ),
         Span::styled("TYPE", Style::default().add_modifier(Modifier::BOLD)),
         Span::styled("GIT STATUS", Style::default().add_modifier(Modifier::BOLD)),
         Span::styled("RECLAIMABLE", Style::default().add_modifier(Modifier::BOLD)),
@@ -543,11 +555,19 @@ fn draw_inspector(f: &mut Frame, app: &TuiApp, area: Rect) {
         let mut lines = Vec::new();
         lines.push(Line::from(vec![
             Span::styled("Project Root: ", Style::default().fg(Color::DarkGray)),
-            Span::styled(p.root.display().to_string(), Style::default().fg(Color::White)),
+            Span::styled(
+                p.root.display().to_string(),
+                Style::default().fg(Color::White),
+            ),
         ]));
         lines.push(Line::from(vec![
             Span::styled("Ecosystem:    ", Style::default().fg(Color::DarkGray)),
-            Span::styled(p.project_type.to_string(), Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                p.project_type.to_string(),
+                Style::default()
+                    .fg(Color::Cyan)
+                    .add_modifier(Modifier::BOLD),
+            ),
         ]));
 
         if let Some(ref git) = p.git_info {
@@ -564,7 +584,10 @@ fn draw_inspector(f: &mut Frame, app: &TuiApp, area: Rect) {
             lines.push(Line::from(vec![
                 Span::styled("Worktree:     ", Style::default().fg(Color::DarkGray)),
                 if git.is_dirty {
-                    Span::styled("Uncommitted changes present (Dirty)", Style::default().fg(Color::Red).add_modifier(Modifier::BOLD))
+                    Span::styled(
+                        "Uncommitted changes present (Dirty)",
+                        Style::default().fg(Color::Red).add_modifier(Modifier::BOLD),
+                    )
                 } else {
                     Span::styled("Clean", Style::default().fg(Color::Green))
                 },
@@ -579,26 +602,42 @@ fn draw_inspector(f: &mut Frame, app: &TuiApp, area: Rect) {
         lines.push(Line::raw(""));
         lines.push(Line::from(Span::styled(
             "Cleanable Artifact Targets:",
-            Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD),
+            Style::default()
+                .fg(Color::Yellow)
+                .add_modifier(Modifier::BOLD),
         )));
 
         for artifact in &p.artifacts {
             lines.push(Line::from(vec![
                 Span::styled("  • ", Style::default().fg(Color::Cyan)),
-                Span::styled(artifact.target.name, Style::default().fg(Color::White).add_modifier(Modifier::BOLD)),
-                Span::styled(format!(" ({})", format_bytes(artifact.size_bytes)), Style::default().fg(Color::Yellow)),
+                Span::styled(
+                    artifact.target.name,
+                    Style::default()
+                        .fg(Color::White)
+                        .add_modifier(Modifier::BOLD),
+                ),
+                Span::styled(
+                    format!(" ({})", format_bytes(artifact.size_bytes)),
+                    Style::default().fg(Color::Yellow),
+                ),
             ]));
         }
 
         lines
     } else {
-        vec![Line::from(Span::styled("No project selected", Style::default().fg(Color::DarkGray)))]
+        vec![Line::from(Span::styled(
+            "No project selected",
+            Style::default().fg(Color::DarkGray),
+        ))]
     };
 
     let p = Paragraph::new(content)
         .block(
             Block::default()
-                .title(Span::styled(" Project Inspector ", Style::default().add_modifier(Modifier::BOLD)))
+                .title(Span::styled(
+                    " Project Inspector ",
+                    Style::default().add_modifier(Modifier::BOLD),
+                ))
                 .borders(Borders::ALL)
                 .border_type(BorderType::Rounded)
                 .border_style(Style::default().fg(Color::Gray)),
@@ -649,7 +688,10 @@ fn draw_gauge(f: &mut Frame, app: &TuiApp, area: Rect) {
 
 fn draw_footer(f: &mut Frame, app: &TuiApp, area: Rect) {
     let (msg_span, msg_border_style) = if let Some((ref msg, style)) = app.notification_message {
-        (Span::styled(msg.clone(), style), Style::default().fg(Color::Yellow))
+        (
+            Span::styled(msg.clone(), style),
+            Style::default().fg(Color::Yellow),
+        )
     } else {
         (
             Span::styled(
@@ -684,7 +726,9 @@ fn draw_confirm_dialog(f: &mut Frame, app: &TuiApp, area: Rect) {
             Span::raw("Are you sure you want to clean "),
             Span::styled(
                 format!("{} artifact(s)", app.selected_artifacts_count()),
-                Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD),
+                Style::default()
+                    .fg(Color::Yellow)
+                    .add_modifier(Modifier::BOLD),
             ),
             Span::raw("?"),
         ]),
@@ -692,27 +736,35 @@ fn draw_confirm_dialog(f: &mut Frame, app: &TuiApp, area: Rect) {
             Span::raw("Reclaiming "),
             Span::styled(
                 format_bytes(app.selected_reclaimable_bytes()),
-                Style::default().fg(Color::Green).add_modifier(Modifier::BOLD),
+                Style::default()
+                    .fg(Color::Green)
+                    .add_modifier(Modifier::BOLD),
             ),
             Span::raw(" of disk space."),
         ]),
         Line::raw(""),
         Line::from(vec![
-            Span::styled("[y / Enter] Confirm", Style::default().fg(Color::Green).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                "[y / Enter] Confirm",
+                Style::default()
+                    .fg(Color::Green)
+                    .add_modifier(Modifier::BOLD),
+            ),
             Span::raw("    "),
             Span::styled("[n / Esc] Cancel", Style::default().fg(Color::Red)),
         ]),
     ];
 
-    let popup = Paragraph::new(text)
-        .alignment(Alignment::Center)
-        .block(
-            Block::default()
-                .title(Span::styled(" Confirm Deletion ", Style::default().fg(Color::Red).add_modifier(Modifier::BOLD)))
-                .borders(Borders::ALL)
-                .border_type(BorderType::Double)
-                .border_style(Style::default().fg(Color::Red)),
-        );
+    let popup = Paragraph::new(text).alignment(Alignment::Center).block(
+        Block::default()
+            .title(Span::styled(
+                " Confirm Deletion ",
+                Style::default().fg(Color::Red).add_modifier(Modifier::BOLD),
+            ))
+            .borders(Borders::ALL)
+            .border_type(BorderType::Double)
+            .border_style(Style::default().fg(Color::Red)),
+    );
 
     f.render_widget(popup, popup_area);
 }

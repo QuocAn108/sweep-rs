@@ -1,4 +1,4 @@
-﻿use std::path::Path;
+use std::path::Path;
 
 pub const CLUSTER_SIZE: u64 = 4096;
 
@@ -6,7 +6,7 @@ pub fn allocated_size(len: u64) -> u64 {
     if len == 0 {
         0
     } else {
-        ((len + CLUSTER_SIZE - 1) / CLUSTER_SIZE) * CLUSTER_SIZE
+        len.div_ceil(CLUSTER_SIZE) * CLUSTER_SIZE
     }
 }
 
@@ -21,10 +21,10 @@ pub fn compute_dir_size(path: &Path) -> u64 {
                 }
                 if file_type.is_dir() {
                     total_size += compute_dir_size(&entry.path());
-                } else if file_type.is_file() {
-                    if let Ok(meta) = entry.metadata() {
-                        total_size += allocated_size(meta.len());
-                    }
+                } else if file_type.is_file()
+                    && let Ok(meta) = entry.metadata()
+                {
+                    total_size += allocated_size(meta.len());
                 }
             }
         }
