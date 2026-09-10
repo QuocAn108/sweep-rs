@@ -18,6 +18,7 @@ git2 = { version = "0.19", default-features = false, features = [] }
 # Terminal UX
 indicatif = { version = "0.17", features = ["rayon"] }
 console = "0.15"
+inquire = "0.7"
 
 # Error Handling & Utilities
 anyhow = "1.0"
