@@ -487,7 +487,7 @@ fn run_app_loop(
 fn draw_ui(f: &mut Frame, app: &mut TuiApp) {
     let size = f.area();
 
-    let show_big_banner = size.height >= 34 && size.width >= 72;
+    let show_big_banner = size.height >= 26 && size.width >= 68;
     let header_height = if show_big_banner { 9 } else { 3 };
 
     // Main layout: Header, Central Body, Footer
