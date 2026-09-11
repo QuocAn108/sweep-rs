@@ -1,6 +1,8 @@
 use crate::core::traits::{GitInfo, GitStatus};
 use git2::{Repository, StatusOptions};
-use std::path::Path;
+use std::collections::HashMap;
+use std::path::{Path, PathBuf};
+use std::sync::Mutex;
 
 #[allow(dead_code)]
 pub struct GitAnalyzer;
@@ -8,12 +10,46 @@ pub struct GitAnalyzer;
 #[allow(dead_code)]
 impl GitAnalyzer {
     pub fn analyze(project_root: &Path) -> Option<GitInfo> {
-        let repo = Repository::discover(project_root).ok()?;
+        Self::analyze_with_cache(project_root, None)
+    }
 
+    pub fn analyze_with_cache(
+        project_root: &Path,
+        cache: Option<&Mutex<HashMap<PathBuf, Option<GitInfo>>>>,
+    ) -> Option<GitInfo> {
+        let repo = match Repository::discover(project_root) {
+            Ok(r) => r,
+            Err(_) => return None,
+        };
+
+        let repo_path = repo.path().to_path_buf();
+
+        if let Some(c) = cache
+            && let Ok(guard) = c.lock()
+            && let Some(cached_info) = guard.get(&repo_path)
+        {
+            return cached_info.clone();
+        }
+
+        let info = Self::inspect_repo(&repo);
+
+        if let Some(c) = cache
+            && let Ok(mut guard) = c.lock()
+        {
+            guard.insert(repo_path, info.clone());
+        }
+
+        info
+    }
+
+    fn inspect_repo(repo: &Repository) -> Option<GitInfo> {
         let mut status_opts = StatusOptions::new();
         status_opts
             .include_untracked(true)
-            .recurse_untracked_dirs(false);
+            .recurse_untracked_dirs(false)
+            .include_ignored(false)
+            .include_unmodified(false)
+            .exclude_submodules(true);
 
         let is_dirty = repo
             .statuses(Some(&mut status_opts))

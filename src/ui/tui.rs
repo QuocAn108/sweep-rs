@@ -16,8 +16,7 @@ use ratatui::layout::{Alignment, Constraint, Direction, Layout, Rect};
 use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{
-    Block, BorderType, Borders, Clear, Gauge, HighlightSpacing, Paragraph, Row, Table, TableState,
-    Wrap,
+    Block, BorderType, Borders, Clear, HighlightSpacing, Paragraph, Row, Table, TableState, Wrap,
 };
 
 use crate::core::cleaner::Cleaner;
@@ -129,6 +128,9 @@ pub struct TuiApp {
     pub dry_run: bool,
     pub should_quit: bool,
     pub table_state: TableState,
+    pub filter_query: String,
+    pub is_filtering: bool,
+    pub filtered_indices: Vec<usize>,
 }
 
 impl TuiApp {
@@ -143,8 +145,10 @@ impl TuiApp {
             }
         }
 
+        let filtered_indices: Vec<usize> = (0..projects.len()).collect();
+
         let mut table_state = TableState::default();
-        if !projects.is_empty() {
+        if !filtered_indices.is_empty() {
             table_state.select(Some(0));
         }
 
@@ -158,26 +162,72 @@ impl TuiApp {
             dry_run,
             should_quit: false,
             table_state,
+            filter_query: String::new(),
+            is_filtering: false,
+            filtered_indices,
         }
     }
 
+    pub fn apply_filter(&mut self) {
+        let q = self.filter_query.trim().to_lowercase();
+        if q.is_empty() {
+            self.filtered_indices = (0..self.projects.len()).collect();
+        } else {
+            self.filtered_indices = self
+                .projects
+                .iter()
+                .enumerate()
+                .filter(|(_, p)| {
+                    let path = p.root.display().to_string().to_lowercase();
+                    let eco = p.project_type.to_string().to_lowercase();
+                    let git_status = match &p.git_info {
+                        Some(info) => {
+                            if info.is_dirty {
+                                format!("{} dirty", info.status.to_string().to_lowercase())
+                            } else {
+                                info.status.to_string().to_lowercase()
+                            }
+                        }
+                        None => "no git".to_string(),
+                    };
+                    path.contains(&q) || eco.contains(&q) || git_status.contains(&q)
+                })
+                .map(|(i, _)| i)
+                .collect();
+        }
+
+        if self.filtered_indices.is_empty() {
+            self.cursor_index = 0;
+            self.table_state.select(None);
+        } else {
+            if self.cursor_index >= self.filtered_indices.len() {
+                self.cursor_index = self.filtered_indices.len() - 1;
+            }
+            self.table_state.select(Some(self.cursor_index));
+        }
+    }
+
+    pub fn current_selected_project_index(&self) -> Option<usize> {
+        self.filtered_indices.get(self.cursor_index).copied()
+    }
+
     pub fn move_up(&mut self) {
-        if self.projects.is_empty() {
+        if self.filtered_indices.is_empty() {
             return;
         }
         if self.cursor_index > 0 {
             self.cursor_index -= 1;
         } else {
-            self.cursor_index = self.projects.len() - 1;
+            self.cursor_index = self.filtered_indices.len() - 1;
         }
         self.table_state.select(Some(self.cursor_index));
     }
 
     pub fn move_down(&mut self) {
-        if self.projects.is_empty() {
+        if self.filtered_indices.is_empty() {
             return;
         }
-        if self.cursor_index + 1 < self.projects.len() {
+        if self.cursor_index + 1 < self.filtered_indices.len() {
             self.cursor_index += 1;
         } else {
             self.cursor_index = 0;
@@ -186,21 +236,42 @@ impl TuiApp {
     }
 
     pub fn toggle_selection(&mut self) {
-        if self.projects.is_empty() {
-            return;
-        }
-        if self.selected_indices.contains(&self.cursor_index) {
-            self.selected_indices.remove(&self.cursor_index);
-        } else {
-            self.selected_indices.insert(self.cursor_index);
+        if let Some(&actual_idx) = self.filtered_indices.get(self.cursor_index) {
+            if self.selected_indices.contains(&actual_idx) {
+                self.selected_indices.remove(&actual_idx);
+            } else {
+                self.selected_indices.insert(actual_idx);
+            }
         }
     }
 
     pub fn toggle_all(&mut self) {
-        if self.selected_indices.len() == self.projects.len() {
+        if self.filtered_indices.is_empty() {
+            return;
+        }
+        let all_filtered_selected = self
+            .filtered_indices
+            .iter()
+            .all(|idx| self.selected_indices.contains(idx));
+
+        if all_filtered_selected {
+            for &idx in &self.filtered_indices {
+                self.selected_indices.remove(&idx);
+            }
+        } else {
+            for &idx in &self.filtered_indices {
+                self.selected_indices.insert(idx);
+            }
+        }
+    }
+
+    pub fn unselect_all(&mut self) {
+        if self.filter_query.is_empty() {
             self.selected_indices.clear();
         } else {
-            self.selected_indices = (0..self.projects.len()).collect();
+            for &idx in &self.filtered_indices {
+                self.selected_indices.remove(&idx);
+            }
         }
     }
 
@@ -278,12 +349,7 @@ impl TuiApp {
             }
             self.projects = remaining;
             self.selected_indices.clear();
-            self.cursor_index = 0;
-            if !self.projects.is_empty() {
-                self.table_state.select(Some(0));
-            } else {
-                self.table_state.select(None);
-            }
+            self.apply_filter();
 
             self.notification_message = Some((
                 format!(
@@ -351,10 +417,45 @@ fn run_app_loop(
                     }
                     _ => {}
                 }
+            } else if app.is_filtering {
+                match key.code {
+                    KeyCode::Enter => {
+                        app.is_filtering = false;
+                    }
+                    KeyCode::Esc => {
+                        app.filter_query.clear();
+                        app.apply_filter();
+                        app.is_filtering = false;
+                    }
+                    KeyCode::Backspace => {
+                        app.filter_query.pop();
+                        app.apply_filter();
+                    }
+                    KeyCode::Char(c) => {
+                        app.filter_query.push(c);
+                        app.apply_filter();
+                    }
+                    _ => {}
+                }
             } else {
                 match key.code {
-                    KeyCode::Char('q') | KeyCode::Esc => {
+                    KeyCode::Char('q') => {
                         app.should_quit = true;
+                    }
+                    KeyCode::Esc => {
+                        if !app.filter_query.is_empty() {
+                            app.filter_query.clear();
+                            app.apply_filter();
+                        } else {
+                            app.should_quit = true;
+                        }
+                    }
+                    KeyCode::Char('/') | KeyCode::Char('f') => {
+                        app.is_filtering = true;
+                    }
+                    KeyCode::Char('c') if !app.filter_query.is_empty() => {
+                        app.filter_query.clear();
+                        app.apply_filter();
                     }
                     KeyCode::Up | KeyCode::Char('k') => {
                         app.move_up();
@@ -367,6 +468,9 @@ fn run_app_loop(
                     }
                     KeyCode::Char('a') => {
                         app.toggle_all();
+                    }
+                    KeyCode::Char('u') => {
+                        app.unselect_all();
                     }
                     KeyCode::Char('d') if !app.selected_indices.is_empty() => {
                         app.show_confirm_dialog = true;
@@ -402,15 +506,32 @@ fn draw_ui(f: &mut Frame, app: &mut TuiApp) {
                 .bg(Color::Cyan)
                 .add_modifier(Modifier::BOLD),
         ),
-        Span::raw(" High-Performance Git-Aware Workspace Cleaner  "),
         Span::styled(
-            format!(
-                "| Inspected {} dirs in {:.2}s | {} projects found",
-                app.stats.dirs_inspected,
-                app.stats.duration.as_secs_f64(),
-                app.projects.len()
-            ),
-            Style::default().fg(Color::DarkGray),
+            " High-Performance Git-Aware Workspace Cleaner",
+            Style::default()
+                .fg(Color::White)
+                .add_modifier(Modifier::BOLD),
+        ),
+        Span::styled("  │  Inspected ", Style::default().fg(Color::Gray)),
+        Span::styled(
+            format!("{} dirs", app.stats.dirs_inspected),
+            Style::default()
+                .fg(Color::Cyan)
+                .add_modifier(Modifier::BOLD),
+        ),
+        Span::styled(" in ", Style::default().fg(Color::Gray)),
+        Span::styled(
+            format!("{:.2}s", app.stats.duration.as_secs_f64()),
+            Style::default()
+                .fg(Color::Yellow)
+                .add_modifier(Modifier::BOLD),
+        ),
+        Span::styled("  │  ", Style::default().fg(Color::Gray)),
+        Span::styled(
+            format!("{} projects found", app.projects.len()),
+            Style::default()
+                .fg(Color::Green)
+                .add_modifier(Modifier::BOLD),
         ),
     ])];
     let header_block = Paragraph::new(header_text).block(
@@ -433,7 +554,7 @@ fn draw_ui(f: &mut Frame, app: &mut TuiApp) {
     // Right: Split into Inspector (Top) and Storage Gauge (Bottom)
     let right_chunks = Layout::default()
         .direction(Direction::Vertical)
-        .constraints([Constraint::Percentage(65), Constraint::Percentage(35)])
+        .constraints([Constraint::Percentage(55), Constraint::Percentage(45)])
         .split(body_chunks[1]);
 
     draw_inspector(f, app, right_chunks[0]);
@@ -449,125 +570,257 @@ fn draw_ui(f: &mut Frame, app: &mut TuiApp) {
 }
 
 fn draw_table(f: &mut Frame, app: &mut TuiApp, area: Rect) {
-    let rows: Vec<Row> = app
-        .projects
-        .iter()
-        .enumerate()
-        .map(|(i, p)| {
-            let is_selected = app.selected_indices.contains(&i);
-            let check_mark = if is_selected { "[x]" } else { "[ ]" };
+    let rows: Vec<Row> = if app.filtered_indices.is_empty() {
+        let msg = if !app.filter_query.is_empty() {
+            format!(
+                "No projects match filter \"{}\". Press [c] or [Esc] to clear.",
+                app.filter_query
+            )
+        } else {
+            "No cleanable projects discovered.".to_string()
+        };
+        vec![Row::new(vec![
+            Span::raw(""),
+            Span::styled(
+                msg,
+                Style::default()
+                    .fg(Color::Rgb(150, 165, 190))
+                    .add_modifier(Modifier::ITALIC),
+            ),
+            Span::raw(""),
+            Span::raw(""),
+            Span::raw(""),
+        ])]
+    } else {
+        app.filtered_indices
+            .iter()
+            .map(|&idx| {
+                let p = &app.projects[idx];
+                let is_selected = app.selected_indices.contains(&idx);
+                let check_mark = if is_selected {
+                    Span::styled(
+                        "[✓]",
+                        Style::default()
+                            .fg(Color::Rgb(80, 245, 140))
+                            .add_modifier(Modifier::BOLD),
+                    )
+                } else {
+                    Span::styled("[ ]", Style::default().fg(Color::Rgb(100, 115, 145)))
+                };
 
-            let path_str = p.root.display().to_string();
-            let display_path = if path_str.len() > 28 {
-                format!("...{}", &path_str[path_str.len() - 25..])
-            } else {
-                path_str
-            };
+                let path_str = p.root.display().to_string();
+                let display_path = if path_str.len() > 28 {
+                    format!("...{}", &path_str[path_str.len() - 25..])
+                } else {
+                    path_str
+                };
 
-            let status_cell = match &p.git_info {
-                Some(info) => {
-                    if info.is_dirty {
-                        CellText::new(format!("{} (Dirty)", info.status), Color::Red, true)
-                    } else {
-                        match info.status {
-                            GitStatus::Stale => CellText::new("Stale", Color::Green, true),
-                            GitStatus::Active => CellText::new("Active", Color::Yellow, false),
-                            GitStatus::Moderate => CellText::new("Moderate", Color::Cyan, false),
-                            GitStatus::Unknown => CellText::new("Unknown", Color::DarkGray, false),
+                let type_style = match p.project_type {
+                    ProjectType::Rust => Style::default()
+                        .fg(Color::Rgb(255, 145, 75))
+                        .add_modifier(Modifier::BOLD),
+                    ProjectType::Node => Style::default()
+                        .fg(Color::Rgb(95, 230, 110))
+                        .add_modifier(Modifier::BOLD),
+                    ProjectType::Python => Style::default()
+                        .fg(Color::Rgb(70, 185, 255))
+                        .add_modifier(Modifier::BOLD),
+                    ProjectType::Dotnet => Style::default()
+                        .fg(Color::Rgb(190, 125, 255))
+                        .add_modifier(Modifier::BOLD),
+                    _ => Style::default()
+                        .fg(Color::Rgb(255, 215, 80))
+                        .add_modifier(Modifier::BOLD),
+                };
+
+                let (status_text, status_style) = match &p.git_info {
+                    Some(info) => {
+                        if info.is_dirty {
+                            (
+                                format!("✖ {} (Dirty)", info.status),
+                                Style::default()
+                                    .fg(Color::Rgb(255, 85, 85))
+                                    .add_modifier(Modifier::BOLD),
+                            )
+                        } else {
+                            match info.status {
+                                GitStatus::Stale => (
+                                    "● Stale".to_string(),
+                                    Style::default()
+                                        .fg(Color::Rgb(75, 235, 130))
+                                        .add_modifier(Modifier::BOLD),
+                                ),
+                                GitStatus::Active => (
+                                    "▲ Active".to_string(),
+                                    Style::default().fg(Color::Rgb(255, 205, 60)),
+                                ),
+                                GitStatus::Moderate => (
+                                    "◆ Moderate".to_string(),
+                                    Style::default().fg(Color::Rgb(85, 195, 255)),
+                                ),
+                                GitStatus::Unknown => (
+                                    "? Unknown".to_string(),
+                                    Style::default().fg(Color::Rgb(130, 140, 165)),
+                                ),
+                            }
                         }
                     }
-                }
-                None => CellText::new("No Git", Color::DarkGray, false),
-            };
+                    None => (
+                        "- No Git".to_string(),
+                        Style::default().fg(Color::Rgb(120, 130, 150)),
+                    ),
+                };
 
-            let status_style = status_cell.style();
-
-            Row::new(vec![
-                Span::styled(
-                    check_mark,
-                    if is_selected {
-                        Style::default()
-                            .fg(Color::Green)
-                            .add_modifier(Modifier::BOLD)
-                    } else {
-                        Style::default().fg(Color::DarkGray)
-                    },
-                ),
-                Span::styled(display_path, Style::default().fg(Color::White)),
-                Span::styled(p.project_type.to_string(), Style::default().fg(Color::Cyan)),
-                Span::styled(status_cell.text, status_style),
-                Span::styled(
-                    format_bytes(p.total_reclaimable_bytes()),
+                let reclaimable_bytes = p.total_reclaimable_bytes();
+                let size_style = if reclaimable_bytes >= 1024 * 1024 * 1024 {
                     Style::default()
-                        .fg(Color::Yellow)
-                        .add_modifier(Modifier::BOLD),
-                ),
-            ])
-        })
-        .collect();
+                        .fg(Color::Rgb(255, 95, 135))
+                        .add_modifier(Modifier::BOLD)
+                } else if reclaimable_bytes >= 100 * 1024 * 1024 {
+                    Style::default()
+                        .fg(Color::Rgb(255, 210, 65))
+                        .add_modifier(Modifier::BOLD)
+                } else if reclaimable_bytes >= 10 * 1024 * 1024 {
+                    Style::default().fg(Color::Rgb(85, 225, 255))
+                } else {
+                    Style::default().fg(Color::Rgb(185, 200, 220))
+                };
+
+                Row::new(vec![
+                    check_mark,
+                    Span::styled(display_path, Style::default().fg(Color::White)),
+                    Span::styled(p.project_type.to_string(), type_style),
+                    Span::styled(status_text, status_style),
+                    Span::styled(format_bytes(reclaimable_bytes), size_style),
+                ])
+            })
+            .collect()
+    };
 
     let header = Row::new(vec![
-        Span::styled("SEL", Style::default().add_modifier(Modifier::BOLD)),
+        Span::styled(
+            "SEL",
+            Style::default()
+                .fg(Color::Cyan)
+                .add_modifier(Modifier::BOLD),
+        ),
         Span::styled(
             "PROJECT PATH",
-            Style::default().add_modifier(Modifier::BOLD),
+            Style::default()
+                .fg(Color::Cyan)
+                .add_modifier(Modifier::BOLD),
         ),
-        Span::styled("TYPE", Style::default().add_modifier(Modifier::BOLD)),
-        Span::styled("GIT STATUS", Style::default().add_modifier(Modifier::BOLD)),
-        Span::styled("RECLAIMABLE", Style::default().add_modifier(Modifier::BOLD)),
+        Span::styled(
+            "TYPE",
+            Style::default()
+                .fg(Color::Cyan)
+                .add_modifier(Modifier::BOLD),
+        ),
+        Span::styled(
+            "GIT STATUS",
+            Style::default()
+                .fg(Color::Cyan)
+                .add_modifier(Modifier::BOLD),
+        ),
+        Span::styled(
+            "RECLAIMABLE",
+            Style::default()
+                .fg(Color::Cyan)
+                .add_modifier(Modifier::BOLD),
+        ),
     ])
-    .style(Style::default().fg(Color::DarkGray))
     .bottom_margin(1);
 
     let widths = [
-        Constraint::Length(4),
+        Constraint::Length(5),
         Constraint::Percentage(45),
         Constraint::Length(10),
-        Constraint::Length(16),
+        Constraint::Length(17),
         Constraint::Length(12),
     ];
+
+    let table_title = if !app.filter_query.is_empty() {
+        format!(
+            " Discovered Cleanable Projects [Filter: \"{}\" ({}/{})] ",
+            app.filter_query,
+            app.filtered_indices.len(),
+            app.projects.len()
+        )
+    } else {
+        format!(" Discovered Cleanable Projects ({}) ", app.projects.len())
+    };
 
     let table = Table::new(rows, widths)
         .header(header)
         .block(
             Block::default()
                 .title(Span::styled(
-                    " Discovered Cleanable Projects ",
-                    Style::default().add_modifier(Modifier::BOLD),
+                    table_title,
+                    Style::default()
+                        .fg(Color::Cyan)
+                        .add_modifier(Modifier::BOLD),
                 ))
                 .borders(Borders::ALL)
                 .border_type(BorderType::Rounded)
-                .border_style(Style::default().fg(Color::Gray)),
+                .border_style(Style::default().fg(Color::Rgb(70, 110, 170))),
         )
         .highlight_style(
             Style::default()
-                .bg(Color::Rgb(40, 44, 52))
-                .add_modifier(Modifier::BOLD),
+                .add_modifier(Modifier::BOLD)
+                .fg(Color::White),
         )
-        .highlight_symbol(">> ")
+        .highlight_symbol("▶ ")
         .highlight_spacing(HighlightSpacing::Always);
 
     f.render_stateful_widget(table, area, &mut app.table_state);
 }
 
 fn draw_inspector(f: &mut Frame, app: &TuiApp, area: Rect) {
-    let content = if let Some(p) = app.projects.get(app.cursor_index) {
+    let content = if let Some(proj_idx) = app.current_selected_project_index()
+        && let Some(p) = app.projects.get(proj_idx)
+    {
         let mut lines = Vec::new();
         lines.push(Line::from(vec![
-            Span::styled("Project Root: ", Style::default().fg(Color::DarkGray)),
             Span::styled(
-                p.root.display().to_string(),
-                Style::default().fg(Color::White),
-            ),
-        ]));
-        lines.push(Line::from(vec![
-            Span::styled("Ecosystem:    ", Style::default().fg(Color::DarkGray)),
-            Span::styled(
-                p.project_type.to_string(),
+                "Project Root: ",
                 Style::default()
-                    .fg(Color::Cyan)
+                    .fg(Color::Rgb(140, 185, 255))
                     .add_modifier(Modifier::BOLD),
             ),
+            Span::styled(
+                p.root.display().to_string(),
+                Style::default()
+                    .fg(Color::White)
+                    .add_modifier(Modifier::BOLD),
+            ),
+        ]));
+
+        let type_style = match p.project_type {
+            ProjectType::Rust => Style::default()
+                .fg(Color::Rgb(255, 145, 75))
+                .add_modifier(Modifier::BOLD),
+            ProjectType::Node => Style::default()
+                .fg(Color::Rgb(95, 230, 110))
+                .add_modifier(Modifier::BOLD),
+            ProjectType::Python => Style::default()
+                .fg(Color::Rgb(70, 185, 255))
+                .add_modifier(Modifier::BOLD),
+            ProjectType::Dotnet => Style::default()
+                .fg(Color::Rgb(190, 125, 255))
+                .add_modifier(Modifier::BOLD),
+            _ => Style::default()
+                .fg(Color::Rgb(255, 215, 80))
+                .add_modifier(Modifier::BOLD),
+        };
+
+        lines.push(Line::from(vec![
+            Span::styled(
+                "Ecosystem:    ",
+                Style::default()
+                    .fg(Color::Rgb(140, 185, 255))
+                    .add_modifier(Modifier::BOLD),
+            ),
+            Span::styled(format!("● {}", p.project_type), type_style),
         ]));
 
         if let Some(ref git) = p.git_info {
@@ -578,24 +831,54 @@ fn draw_inspector(f: &mut Frame, app: &TuiApp, area: Rect) {
                 None => "No commits found".to_string(),
             };
             lines.push(Line::from(vec![
-                Span::styled("Last Commit:  ", Style::default().fg(Color::DarkGray)),
-                Span::styled(commit_age, Style::default().fg(Color::Yellow)),
+                Span::styled(
+                    "Last Commit:  ",
+                    Style::default()
+                        .fg(Color::Rgb(140, 185, 255))
+                        .add_modifier(Modifier::BOLD),
+                ),
+                Span::styled(
+                    commit_age,
+                    Style::default()
+                        .fg(Color::Rgb(255, 215, 75))
+                        .add_modifier(Modifier::BOLD),
+                ),
             ]));
             lines.push(Line::from(vec![
-                Span::styled("Worktree:     ", Style::default().fg(Color::DarkGray)),
+                Span::styled(
+                    "Worktree:     ",
+                    Style::default()
+                        .fg(Color::Rgb(140, 185, 255))
+                        .add_modifier(Modifier::BOLD),
+                ),
                 if git.is_dirty {
                     Span::styled(
-                        "Uncommitted changes present (Dirty)",
-                        Style::default().fg(Color::Red).add_modifier(Modifier::BOLD),
+                        "✖ Uncommitted changes present (Dirty)",
+                        Style::default()
+                            .fg(Color::Rgb(255, 85, 85))
+                            .add_modifier(Modifier::BOLD),
                     )
                 } else {
-                    Span::styled("Clean", Style::default().fg(Color::Green))
+                    Span::styled(
+                        "✓ Clean",
+                        Style::default()
+                            .fg(Color::Rgb(75, 235, 130))
+                            .add_modifier(Modifier::BOLD),
+                    )
                 },
             ]));
         } else {
             lines.push(Line::from(vec![
-                Span::styled("Git:          ", Style::default().fg(Color::DarkGray)),
-                Span::styled("Not a Git repository", Style::default().fg(Color::DarkGray)),
+                Span::styled(
+                    "Git:          ",
+                    Style::default()
+                        .fg(Color::Rgb(140, 185, 255))
+                        .add_modifier(Modifier::BOLD),
+                ),
+                Span::styled(
+                    "Not a Git repository",
+                    Style::default().fg(Color::Rgb(150, 160, 180)),
+                ),
             ]));
         }
 
@@ -603,13 +886,13 @@ fn draw_inspector(f: &mut Frame, app: &TuiApp, area: Rect) {
         lines.push(Line::from(Span::styled(
             "Cleanable Artifact Targets:",
             Style::default()
-                .fg(Color::Yellow)
+                .fg(Color::Rgb(255, 205, 60))
                 .add_modifier(Modifier::BOLD),
         )));
 
         for artifact in &p.artifacts {
             lines.push(Line::from(vec![
-                Span::styled("  • ", Style::default().fg(Color::Cyan)),
+                Span::styled("  ✦ ", Style::default().fg(Color::Rgb(0, 230, 255))),
                 Span::styled(
                     artifact.target.name,
                     Style::default()
@@ -618,7 +901,9 @@ fn draw_inspector(f: &mut Frame, app: &TuiApp, area: Rect) {
                 ),
                 Span::styled(
                     format!(" ({})", format_bytes(artifact.size_bytes)),
-                    Style::default().fg(Color::Yellow),
+                    Style::default()
+                        .fg(Color::Rgb(255, 215, 75))
+                        .add_modifier(Modifier::BOLD),
                 ),
             ]));
         }
@@ -627,7 +912,7 @@ fn draw_inspector(f: &mut Frame, app: &TuiApp, area: Rect) {
     } else {
         vec![Line::from(Span::styled(
             "No project selected",
-            Style::default().fg(Color::DarkGray),
+            Style::default().fg(Color::Rgb(130, 140, 160)),
         ))]
     };
 
@@ -636,11 +921,13 @@ fn draw_inspector(f: &mut Frame, app: &TuiApp, area: Rect) {
             Block::default()
                 .title(Span::styled(
                     " Project Inspector ",
-                    Style::default().add_modifier(Modifier::BOLD),
+                    Style::default()
+                        .fg(Color::Cyan)
+                        .add_modifier(Modifier::BOLD),
                 ))
                 .borders(Borders::ALL)
                 .border_type(BorderType::Rounded)
-                .border_style(Style::default().fg(Color::Gray)),
+                .border_style(Style::default().fg(Color::Rgb(70, 110, 170))),
         )
         .wrap(Wrap { trim: true });
 
@@ -656,161 +943,609 @@ fn draw_gauge(f: &mut Frame, app: &TuiApp, area: Rect) {
         0.0
     };
 
-    let label = format!(
-        "{} / {} ({:.0}%)",
-        format_bytes(selected),
-        format_bytes(total),
-        ratio * 100.0
-    );
-
-    let gauge = Gauge::default()
-        .block(
-            Block::default()
-                .title(Span::styled(
-                    " Selected Reclaimable Space ",
-                    Style::default().add_modifier(Modifier::BOLD),
-                ))
-                .borders(Borders::ALL)
-                .border_type(BorderType::Rounded)
-                .border_style(Style::default().fg(Color::Gray)),
-        )
-        .gauge_style(
+    // Card container block
+    let block = Block::default()
+        .title(Span::styled(
+            " Selected Reclaimable Space ",
             Style::default()
-                .fg(Color::Green)
-                .bg(Color::Rgb(30, 30, 30))
+                .fg(Color::Cyan)
                 .add_modifier(Modifier::BOLD),
-        )
-        .ratio(ratio)
-        .label(label);
+        ))
+        .borders(Borders::ALL)
+        .border_type(BorderType::Rounded)
+        .border_style(Style::default().fg(Color::Rgb(70, 110, 170)));
 
-    f.render_widget(gauge, area);
+    let inner_area = block.inner(area);
+    f.render_widget(block, area);
+
+    if inner_area.height < 3 || inner_area.width < 10 {
+        return;
+    }
+
+    // Calculate ecosystem breakdown of selected items
+    let mut rust_bytes = 0u64;
+    let mut rust_count = 0usize;
+    let mut node_bytes = 0u64;
+    let mut node_count = 0usize;
+    let mut dotnet_bytes = 0u64;
+    let mut dotnet_count = 0usize;
+    let mut python_bytes = 0u64;
+    let mut python_count = 0usize;
+    let mut other_bytes = 0u64;
+    let mut other_count = 0usize;
+
+    let mut stale_bytes = 0u64;
+    let mut active_bytes = 0u64;
+
+    for &idx in &app.selected_indices {
+        if let Some(p) = app.projects.get(idx) {
+            let p_bytes = p.total_reclaimable_bytes();
+            match p.project_type {
+                ProjectType::Rust => {
+                    rust_bytes += p_bytes;
+                    rust_count += 1;
+                }
+                ProjectType::Node => {
+                    node_bytes += p_bytes;
+                    node_count += 1;
+                }
+                ProjectType::Dotnet => {
+                    dotnet_bytes += p_bytes;
+                    dotnet_count += 1;
+                }
+                ProjectType::Python => {
+                    python_bytes += p_bytes;
+                    python_count += 1;
+                }
+                _ => {
+                    other_bytes += p_bytes;
+                    other_count += 1;
+                }
+            }
+            if let Some(ref git) = p.git_info {
+                if git.status == GitStatus::Stale && !git.is_dirty {
+                    stale_bytes += p_bytes;
+                } else {
+                    active_bytes += p_bytes;
+                }
+            } else {
+                stale_bytes += p_bytes;
+            }
+        }
+    }
+
+    let mut lines = Vec::new();
+
+    // 1. Storage Metric line
+    lines.push(Line::from(vec![
+        Span::styled(
+            "Selected: ",
+            Style::default()
+                .fg(Color::Rgb(140, 185, 255))
+                .add_modifier(Modifier::BOLD),
+        ),
+        Span::styled(
+            format_bytes(selected),
+            Style::default()
+                .fg(Color::Rgb(80, 245, 140))
+                .add_modifier(Modifier::BOLD),
+        ),
+        Span::styled(" / ", Style::default().fg(Color::Rgb(120, 130, 150))),
+        Span::styled(
+            format_bytes(total),
+            Style::default().fg(Color::Rgb(200, 215, 235)),
+        ),
+        Span::styled(
+            format!(" ({:.1}%)", ratio * 100.0),
+            Style::default()
+                .fg(Color::Rgb(255, 210, 75))
+                .add_modifier(Modifier::BOLD),
+        ),
+    ]));
+
+    // 2. Artifact targets line
+    lines.push(Line::from(vec![
+        Span::styled(
+            "Targets:  ",
+            Style::default()
+                .fg(Color::Rgb(140, 185, 255))
+                .add_modifier(Modifier::BOLD),
+        ),
+        Span::styled(
+            format!("{} artifact(s)", app.selected_artifacts_count()),
+            Style::default().fg(Color::White),
+        ),
+        Span::styled(" across ", Style::default().fg(Color::Rgb(120, 130, 150))),
+        Span::styled(
+            format!("{} project(s)", app.selected_indices.len()),
+            Style::default()
+                .fg(Color::Rgb(85, 215, 255))
+                .add_modifier(Modifier::BOLD),
+        ),
+    ]));
+
+    // 3. Slim, modern 1-line progress bar (Never floods screen with solid bright background)
+    let bar_width = (inner_area.width.saturating_sub(2) as usize).max(5);
+    let filled_chars = ((ratio * bar_width as f64).round() as usize).min(bar_width);
+    let unfilled_chars = bar_width.saturating_sub(filled_chars);
+
+    let filled_str = "█".repeat(filled_chars);
+    let unfilled_str = "░".repeat(unfilled_chars);
+
+    let bar_color = if ratio == 0.0 {
+        Color::Rgb(80, 95, 120)
+    } else if ratio < 0.35 {
+        Color::Rgb(0, 215, 185)
+    } else if ratio < 0.75 {
+        Color::Rgb(75, 235, 130)
+    } else {
+        Color::Rgb(255, 175, 45)
+    };
+
+    lines.push(Line::from(vec![
+        Span::styled(
+            filled_str,
+            Style::default().fg(bar_color).add_modifier(Modifier::BOLD),
+        ),
+        Span::styled(unfilled_str, Style::default().fg(Color::Rgb(40, 50, 70))),
+    ]));
+
+    // 4. Ecosystem breakdown lines
+    lines.push(Line::raw(""));
+    lines.push(Line::from(Span::styled(
+        "Ecosystem Breakdown:",
+        Style::default()
+            .fg(Color::Rgb(255, 205, 60))
+            .add_modifier(Modifier::BOLD),
+    )));
+
+    if app.selected_indices.is_empty() {
+        lines.push(Line::from(Span::styled(
+            "  (No projects selected. Press 'Space' or 'a')",
+            Style::default().fg(Color::Rgb(120, 130, 150)),
+        )));
+    } else {
+        if rust_count > 0 {
+            lines.push(Line::from(vec![
+                Span::styled(
+                    "  🦀 Rust:    ",
+                    Style::default().fg(Color::Rgb(255, 145, 75)),
+                ),
+                Span::styled(
+                    format_bytes(rust_bytes),
+                    Style::default()
+                        .fg(Color::White)
+                        .add_modifier(Modifier::BOLD),
+                ),
+                Span::styled(
+                    format!(" ({} project(s))", rust_count),
+                    Style::default().fg(Color::Rgb(130, 140, 160)),
+                ),
+            ]));
+        }
+        if node_count > 0 {
+            lines.push(Line::from(vec![
+                Span::styled(
+                    "  🟢 Node:    ",
+                    Style::default().fg(Color::Rgb(95, 230, 110)),
+                ),
+                Span::styled(
+                    format_bytes(node_bytes),
+                    Style::default()
+                        .fg(Color::White)
+                        .add_modifier(Modifier::BOLD),
+                ),
+                Span::styled(
+                    format!(" ({} project(s))", node_count),
+                    Style::default().fg(Color::Rgb(130, 140, 160)),
+                ),
+            ]));
+        }
+        if dotnet_count > 0 {
+            lines.push(Line::from(vec![
+                Span::styled(
+                    "  🟣 .NET:    ",
+                    Style::default().fg(Color::Rgb(190, 125, 255)),
+                ),
+                Span::styled(
+                    format_bytes(dotnet_bytes),
+                    Style::default()
+                        .fg(Color::White)
+                        .add_modifier(Modifier::BOLD),
+                ),
+                Span::styled(
+                    format!(" ({} project(s))", dotnet_count),
+                    Style::default().fg(Color::Rgb(130, 140, 160)),
+                ),
+            ]));
+        }
+        if python_count > 0 {
+            lines.push(Line::from(vec![
+                Span::styled(
+                    "  🐍 Python:  ",
+                    Style::default().fg(Color::Rgb(70, 185, 255)),
+                ),
+                Span::styled(
+                    format_bytes(python_bytes),
+                    Style::default()
+                        .fg(Color::White)
+                        .add_modifier(Modifier::BOLD),
+                ),
+                Span::styled(
+                    format!(" ({} project(s))", python_count),
+                    Style::default().fg(Color::Rgb(130, 140, 160)),
+                ),
+            ]));
+        }
+        if other_count > 0 {
+            lines.push(Line::from(vec![
+                Span::styled(
+                    "  📦 Other:   ",
+                    Style::default().fg(Color::Rgb(255, 215, 80)),
+                ),
+                Span::styled(
+                    format_bytes(other_bytes),
+                    Style::default()
+                        .fg(Color::White)
+                        .add_modifier(Modifier::BOLD),
+                ),
+                Span::styled(
+                    format!(" ({} project(s))", other_count),
+                    Style::default().fg(Color::Rgb(130, 140, 160)),
+                ),
+            ]));
+        }
+
+        // Safety summary
+        lines.push(Line::from(vec![
+            Span::styled("  Safety:     ", Style::default().fg(Color::Cyan)),
+            Span::styled(
+                format!("● Stale: {}", format_bytes(stale_bytes)),
+                Style::default()
+                    .fg(Color::Rgb(75, 235, 130))
+                    .add_modifier(Modifier::BOLD),
+            ),
+            Span::styled(
+                format!("  ▲ Active: {}", format_bytes(active_bytes)),
+                if active_bytes > 0 {
+                    Style::default()
+                        .fg(Color::Rgb(255, 205, 60))
+                        .add_modifier(Modifier::BOLD)
+                } else {
+                    Style::default().fg(Color::Rgb(120, 130, 150))
+                },
+            ),
+        ]));
+    }
+
+    let p = Paragraph::new(lines).wrap(Wrap { trim: true });
+    f.render_widget(p, inner_area);
 }
 
 fn draw_footer(f: &mut Frame, app: &TuiApp, area: Rect) {
-    let (msg_span, msg_border_style) = if let Some((ref msg, style)) = app.notification_message {
-        (
-            Span::styled(msg.clone(), style),
-            Style::default().fg(Color::Yellow),
-        )
-    } else {
-        (
-            Span::styled(
-                "[↑/k] Up  [↓/j] Down  [Space] Toggle  [a] Toggle All  [d] Clean Selected  [q/Esc] Exit",
-                Style::default().fg(Color::DarkGray),
-            ),
-            Style::default().fg(Color::DarkGray),
-        )
-    };
+    let (footer_line, footer_border_style) =
+        if let Some((ref msg, style)) = app.notification_message {
+            (
+                Line::from(vec![Span::styled(msg.clone(), style)]),
+                Style::default().fg(Color::Yellow),
+            )
+        } else if app.is_filtering {
+            let prompt = if app.filter_query.is_empty() {
+                Span::styled(
+                    "Type to filter by name, path, ecosystem, or git status... ",
+                    Style::default().fg(Color::Rgb(130, 140, 160)),
+                )
+            } else {
+                Span::styled(
+                    format!("{} ", app.filter_query),
+                    Style::default()
+                        .fg(Color::White)
+                        .add_modifier(Modifier::BOLD),
+                )
+            };
 
-    let footer = Paragraph::new(Line::from(vec![msg_span]))
+            (
+                Line::from(vec![
+                    Span::styled(
+                        "  Filter: ",
+                        Style::default()
+                            .fg(Color::Black)
+                            .bg(Color::Rgb(255, 205, 50))
+                            .add_modifier(Modifier::BOLD),
+                    ),
+                    Span::raw(" "),
+                    prompt,
+                    Span::styled(
+                        "█",
+                        Style::default()
+                            .fg(Color::Rgb(255, 205, 50))
+                            .add_modifier(Modifier::RAPID_BLINK),
+                    ),
+                    Span::raw("   "),
+                    Span::styled(
+                        format!(
+                            "({}/{} matched)",
+                            app.filtered_indices.len(),
+                            app.projects.len()
+                        ),
+                        Style::default().fg(Color::Rgb(85, 215, 255)),
+                    ),
+                    Span::styled(" │ ", Style::default().fg(Color::Rgb(65, 80, 115))),
+                    Span::styled(
+                        " [Enter] Done ",
+                        Style::default()
+                            .fg(Color::Black)
+                            .bg(Color::Rgb(50, 220, 110))
+                            .add_modifier(Modifier::BOLD),
+                    ),
+                    Span::raw(" "),
+                    Span::styled(
+                        " [Esc] Cancel ",
+                        Style::default()
+                            .fg(Color::White)
+                            .bg(Color::Rgb(215, 50, 75))
+                            .add_modifier(Modifier::BOLD),
+                    ),
+                ]),
+                Style::default().fg(Color::Rgb(255, 205, 50)),
+            )
+        } else {
+            let mut spans = vec![
+                Span::styled(
+                    " ↑/k ",
+                    Style::default()
+                        .fg(Color::White)
+                        .bg(Color::Rgb(45, 75, 150))
+                        .add_modifier(Modifier::BOLD),
+                ),
+                Span::styled(
+                    " Up ",
+                    Style::default()
+                        .fg(Color::Rgb(180, 215, 255))
+                        .add_modifier(Modifier::BOLD),
+                ),
+                Span::styled(
+                    " ↓/j ",
+                    Style::default()
+                        .fg(Color::White)
+                        .bg(Color::Rgb(45, 75, 150))
+                        .add_modifier(Modifier::BOLD),
+                ),
+                Span::styled(
+                    " Down ",
+                    Style::default()
+                        .fg(Color::Rgb(180, 215, 255))
+                        .add_modifier(Modifier::BOLD),
+                ),
+                Span::styled(" │ ", Style::default().fg(Color::Rgb(65, 80, 115))),
+                Span::styled(
+                    " Space ",
+                    Style::default()
+                        .fg(Color::Black)
+                        .bg(Color::Rgb(245, 175, 45))
+                        .add_modifier(Modifier::BOLD),
+                ),
+                Span::styled(
+                    " Toggle ",
+                    Style::default()
+                        .fg(Color::Rgb(255, 225, 130))
+                        .add_modifier(Modifier::BOLD),
+                ),
+                Span::styled(" │ ", Style::default().fg(Color::Rgb(65, 80, 115))),
+                Span::styled(
+                    " a ",
+                    Style::default()
+                        .fg(Color::Black)
+                        .bg(Color::Rgb(30, 190, 165))
+                        .add_modifier(Modifier::BOLD),
+                ),
+                Span::styled(
+                    " Select All ",
+                    Style::default()
+                        .fg(Color::Rgb(120, 250, 230))
+                        .add_modifier(Modifier::BOLD),
+                ),
+                Span::styled(" │ ", Style::default().fg(Color::Rgb(65, 80, 115))),
+                Span::styled(
+                    " u ",
+                    Style::default()
+                        .fg(Color::White)
+                        .bg(Color::Rgb(110, 80, 160))
+                        .add_modifier(Modifier::BOLD),
+                ),
+                Span::styled(
+                    " Unselect All ",
+                    Style::default()
+                        .fg(Color::Rgb(215, 195, 250))
+                        .add_modifier(Modifier::BOLD),
+                ),
+                Span::styled(" │ ", Style::default().fg(Color::Rgb(65, 80, 115))),
+            ];
+
+            if !app.filter_query.is_empty() {
+                spans.push(Span::styled(
+                    " c ",
+                    Style::default()
+                        .fg(Color::Black)
+                        .bg(Color::Rgb(255, 205, 50))
+                        .add_modifier(Modifier::BOLD),
+                ));
+                spans.push(Span::styled(
+                    " Clear Filter ",
+                    Style::default()
+                        .fg(Color::Rgb(255, 225, 130))
+                        .add_modifier(Modifier::BOLD),
+                ));
+            } else {
+                spans.push(Span::styled(
+                    " / ",
+                    Style::default()
+                        .fg(Color::Black)
+                        .bg(Color::Rgb(55, 175, 240))
+                        .add_modifier(Modifier::BOLD),
+                ));
+                spans.push(Span::styled(
+                    " Filter ",
+                    Style::default()
+                        .fg(Color::Rgb(160, 225, 255))
+                        .add_modifier(Modifier::BOLD),
+                ));
+            }
+
+            spans.push(Span::styled(
+                " │ ",
+                Style::default().fg(Color::Rgb(65, 80, 115)),
+            ));
+            spans.push(Span::styled(
+                " d ",
+                Style::default()
+                    .fg(Color::White)
+                    .bg(Color::Rgb(220, 45, 75))
+                    .add_modifier(Modifier::BOLD),
+            ));
+            spans.push(Span::styled(
+                " Clean Selected ",
+                Style::default()
+                    .fg(Color::Rgb(255, 130, 155))
+                    .add_modifier(Modifier::BOLD),
+            ));
+            spans.push(Span::styled(
+                " │ ",
+                Style::default().fg(Color::Rgb(65, 80, 115)),
+            ));
+            spans.push(Span::styled(
+                " q/Esc ",
+                Style::default()
+                    .fg(Color::White)
+                    .bg(Color::Rgb(135, 65, 185))
+                    .add_modifier(Modifier::BOLD),
+            ));
+            spans.push(Span::styled(
+                " Exit ",
+                Style::default()
+                    .fg(Color::Rgb(225, 185, 255))
+                    .add_modifier(Modifier::BOLD),
+            ));
+
+            (
+                Line::from(spans),
+                Style::default().fg(Color::Rgb(85, 115, 165)),
+            )
+        };
+
+    let footer = Paragraph::new(footer_line)
         .alignment(Alignment::Center)
         .block(
             Block::default()
                 .borders(Borders::ALL)
                 .border_type(BorderType::Rounded)
-                .border_style(msg_border_style),
+                .border_style(footer_border_style),
         );
 
     f.render_widget(footer, area);
 }
 
 fn draw_confirm_dialog(f: &mut Frame, app: &TuiApp, area: Rect) {
-    let popup_area = centered_rect(50, 25, area);
+    let width = 58.min(area.width.saturating_sub(4));
+    let height = 11.min(area.height.saturating_sub(2));
+    let popup_area = Rect {
+        x: area.x + (area.width.saturating_sub(width)) / 2,
+        y: area.y + (area.height.saturating_sub(height)) / 2,
+        width,
+        height,
+    };
 
-    // Clear background behind popup
     f.render_widget(Clear, popup_area);
 
     let text = vec![
         Line::raw(""),
-        Line::from(vec![
-            Span::raw("Are you sure you want to clean "),
-            Span::styled(
-                format!("{} artifact(s)", app.selected_artifacts_count()),
-                Style::default()
-                    .fg(Color::Yellow)
-                    .add_modifier(Modifier::BOLD),
-            ),
-            Span::raw("?"),
-        ]),
-        Line::from(vec![
-            Span::raw("Reclaiming "),
-            Span::styled(
-                format_bytes(app.selected_reclaimable_bytes()),
-                Style::default()
-                    .fg(Color::Green)
-                    .add_modifier(Modifier::BOLD),
-            ),
-            Span::raw(" of disk space."),
-        ]),
+        Line::from(vec![Span::styled(
+            "  Ready to clean selected build artifacts?",
+            Style::default()
+                .fg(Color::White)
+                .add_modifier(Modifier::BOLD),
+        )]),
         Line::raw(""),
         Line::from(vec![
             Span::styled(
-                "[y / Enter] Confirm",
+                "  Targets:    ",
+                Style::default().fg(Color::Rgb(140, 160, 190)),
+            ),
+            Span::styled(
+                format!("{} artifact(s)", app.selected_artifacts_count()),
                 Style::default()
-                    .fg(Color::Green)
+                    .fg(Color::Rgb(255, 205, 75))
+                    .add_modifier(Modifier::BOLD),
+            ),
+            Span::styled(" across ", Style::default().fg(Color::Rgb(140, 160, 190))),
+            Span::styled(
+                format!("{} project(s)", app.selected_indices.len()),
+                Style::default()
+                    .fg(Color::Rgb(85, 215, 255))
+                    .add_modifier(Modifier::BOLD),
+            ),
+        ]),
+        Line::from(vec![
+            Span::styled(
+                "  Reclaim:    ",
+                Style::default().fg(Color::Rgb(140, 160, 190)),
+            ),
+            Span::styled(
+                format_bytes(app.selected_reclaimable_bytes()),
+                Style::default()
+                    .fg(Color::Rgb(80, 245, 140))
+                    .add_modifier(Modifier::BOLD),
+            ),
+            Span::styled(
+                " of disk space",
+                Style::default().fg(Color::Rgb(140, 160, 190)),
+            ),
+        ]),
+        Line::from(vec![
+            Span::styled(
+                "  Safety:     ",
+                Style::default().fg(Color::Rgb(140, 160, 190)),
+            ),
+            Span::styled(
+                "Atomic rename to .sweep-trash (safe rollback)",
+                Style::default().fg(Color::Rgb(100, 200, 225)),
+            ),
+        ]),
+        Line::raw(""),
+        Line::from(vec![
+            Span::raw("    "),
+            Span::styled(
+                " [y / Enter] Confirm Clean ",
+                Style::default()
+                    .fg(Color::Black)
+                    .bg(Color::Rgb(50, 220, 110))
                     .add_modifier(Modifier::BOLD),
             ),
             Span::raw("    "),
-            Span::styled("[n / Esc] Cancel", Style::default().fg(Color::Red)),
+            Span::styled(
+                " [n / Esc] Cancel ",
+                Style::default()
+                    .fg(Color::White)
+                    .bg(Color::Rgb(215, 50, 75))
+                    .add_modifier(Modifier::BOLD),
+            ),
         ]),
     ];
 
-    let popup = Paragraph::new(text).alignment(Alignment::Center).block(
+    let popup = Paragraph::new(text).block(
         Block::default()
             .title(Span::styled(
-                " Confirm Deletion ",
-                Style::default().fg(Color::Red).add_modifier(Modifier::BOLD),
+                " 󰈸 Confirm Cleanup ",
+                Style::default()
+                    .fg(Color::Rgb(255, 95, 115))
+                    .add_modifier(Modifier::BOLD),
             ))
             .borders(Borders::ALL)
-            .border_type(BorderType::Double)
-            .border_style(Style::default().fg(Color::Red)),
+            .border_type(BorderType::Rounded)
+            .border_style(Style::default().fg(Color::Rgb(255, 95, 115))),
     );
 
     f.render_widget(popup, popup_area);
-}
-
-fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {
-    let popup_layout = Layout::default()
-        .direction(Direction::Vertical)
-        .constraints([
-            Constraint::Percentage((100 - percent_y) / 2),
-            Constraint::Percentage(percent_y),
-            Constraint::Percentage((100 - percent_y) / 2),
-        ])
-        .split(r);
-
-    Layout::default()
-        .direction(Direction::Horizontal)
-        .constraints([
-            Constraint::Percentage((100 - percent_x) / 2),
-            Constraint::Percentage(percent_x),
-            Constraint::Percentage((100 - percent_x) / 2),
-        ])
-        .split(popup_layout[1])[1]
-}
-
-struct CellText {
-    text: String,
-    color: Color,
-    bold: bool,
-}
-
-impl CellText {
-    fn new<S: Into<String>>(text: S, color: Color, bold: bool) -> Self {
-        Self {
-            text: text.into(),
-            color,
-            bold,
-        }
-    }
-
-    fn style(&self) -> Style {
-        let mut s = Style::default().fg(self.color);
-        if self.bold {
-            s = s.add_modifier(Modifier::BOLD);
-        }
-        s
-    }
 }
 
 #[cfg(test)]
@@ -818,11 +1553,10 @@ mod tests {
     use super::*;
     use crate::core::traits::{ArtifactTarget, DiscoveredArtifact, ProjectType};
 
-    #[test]
-    fn test_tui_app_state_navigation() {
-        let projects = vec![
+    fn create_mock_projects() -> Vec<DiscoveredProject> {
+        vec![
             DiscoveredProject {
-                root: PathBuf::from("/mock/app1"),
+                root: PathBuf::from("/mock/hero_backend"),
                 project_type: ProjectType::Rust,
                 artifacts: vec![DiscoveredArtifact {
                     target: ArtifactTarget {
@@ -830,13 +1564,13 @@ mod tests {
                         rel_path: PathBuf::from("target"),
                         is_reconstructible: true,
                     },
-                    abs_path: PathBuf::from("/mock/app1/target"),
+                    abs_path: PathBuf::from("/mock/hero_backend/target"),
                     size_bytes: 1024,
                 }],
                 git_info: None,
             },
             DiscoveredProject {
-                root: PathBuf::from("/mock/app2"),
+                root: PathBuf::from("/mock/hdp_frontend"),
                 project_type: ProjectType::Node,
                 artifacts: vec![DiscoveredArtifact {
                     target: ArtifactTarget {
@@ -844,13 +1578,31 @@ mod tests {
                         rel_path: PathBuf::from("node_modules"),
                         is_reconstructible: true,
                     },
-                    abs_path: PathBuf::from("/mock/app2/node_modules"),
+                    abs_path: PathBuf::from("/mock/hdp_frontend/node_modules"),
                     size_bytes: 2048,
                 }],
                 git_info: None,
             },
-        ];
+            DiscoveredProject {
+                root: PathBuf::from("/mock/order_service"),
+                project_type: ProjectType::Dotnet,
+                artifacts: vec![DiscoveredArtifact {
+                    target: ArtifactTarget {
+                        name: "bin",
+                        rel_path: PathBuf::from("bin"),
+                        is_reconstructible: true,
+                    },
+                    abs_path: PathBuf::from("/mock/order_service/bin"),
+                    size_bytes: 4096,
+                }],
+                git_info: None,
+            },
+        ]
+    }
 
+    #[test]
+    fn test_tui_app_state_navigation() {
+        let projects = create_mock_projects();
         let stats = ScanStats {
             dirs_inspected: 10,
             duration: Duration::from_millis(50),
@@ -863,19 +1615,93 @@ mod tests {
         assert_eq!(app.cursor_index, 1);
 
         app.move_down();
+        assert_eq!(app.cursor_index, 2);
+
+        app.move_down();
         assert_eq!(app.cursor_index, 0); // Loops back to start
 
         app.move_up();
-        assert_eq!(app.cursor_index, 1); // Loops to end
+        assert_eq!(app.cursor_index, 2); // Loops to end
 
         // Toggle selection
         app.toggle_selection();
-        assert!(app.selected_indices.contains(&1));
-        assert_eq!(app.selected_reclaimable_bytes(), 2048);
+        assert!(app.selected_indices.contains(&2));
+        assert_eq!(app.selected_reclaimable_bytes(), 4096);
 
         // Toggle all
         app.toggle_all();
-        assert_eq!(app.selected_indices.len(), 2);
-        assert_eq!(app.selected_reclaimable_bytes(), 3072);
+        assert_eq!(app.selected_indices.len(), 3);
+        assert_eq!(app.selected_reclaimable_bytes(), 7168);
+    }
+
+    #[test]
+    fn test_tui_filtering_and_navigation() {
+        let projects = create_mock_projects();
+        let stats = ScanStats {
+            dirs_inspected: 10,
+            duration: Duration::from_millis(50),
+        };
+
+        let mut app = TuiApp::new(projects, stats, false);
+        assert_eq!(app.filtered_indices.len(), 3);
+
+        // Filter by ecosystem "node"
+        app.filter_query = "node".to_string();
+        app.apply_filter();
+        assert_eq!(app.filtered_indices.len(), 1);
+        assert_eq!(app.filtered_indices[0], 1); // Index 1 is node
+        assert_eq!(app.cursor_index, 0);
+
+        // Filter by path substring "hero"
+        app.filter_query = "hero".to_string();
+        app.apply_filter();
+        assert_eq!(app.filtered_indices.len(), 1);
+        assert_eq!(app.filtered_indices[0], 0);
+
+        // Filter non-matching
+        app.filter_query = "non_existent".to_string();
+        app.apply_filter();
+        assert_eq!(app.filtered_indices.len(), 0);
+
+        // Clear filter
+        app.filter_query.clear();
+        app.apply_filter();
+        assert_eq!(app.filtered_indices.len(), 3);
+    }
+
+    #[test]
+    fn test_tui_unselect_all_and_filtered_toggle() {
+        let projects = create_mock_projects();
+        let stats = ScanStats {
+            dirs_inspected: 10,
+            duration: Duration::from_millis(50),
+        };
+
+        let mut app = TuiApp::new(projects, stats, false);
+
+        // Select all
+        app.toggle_all();
+        assert_eq!(app.selected_indices.len(), 3);
+
+        // Unselect all via 'u'
+        app.unselect_all();
+        assert_eq!(app.selected_indices.len(), 0);
+
+        // Now filter by "node", select all matching
+        app.filter_query = "node".to_string();
+        app.apply_filter();
+        app.toggle_all(); // Toggles only the filtered items!
+        assert_eq!(app.selected_indices.len(), 1);
+        assert!(app.selected_indices.contains(&1));
+
+        // Clear filter: the node item remains selected
+        app.filter_query.clear();
+        app.apply_filter();
+        assert_eq!(app.selected_indices.len(), 1);
+        assert!(app.selected_indices.contains(&1));
+
+        // Unselect all
+        app.unselect_all();
+        assert_eq!(app.selected_indices.len(), 0);
     }
 }
