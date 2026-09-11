@@ -603,7 +603,6 @@ fn draw_table(f: &mut Frame, app: &mut TuiApp, area: Rect) {
                 .add_modifier(Modifier::BOLD),
         ),
     ])
-    .style(Style::default().bg(Color::Rgb(22, 32, 52)))
     .bottom_margin(1);
 
     let widths = [
@@ -630,8 +629,8 @@ fn draw_table(f: &mut Frame, app: &mut TuiApp, area: Rect) {
         )
         .highlight_style(
             Style::default()
-                .bg(Color::Rgb(32, 45, 75))
-                .add_modifier(Modifier::BOLD),
+                .add_modifier(Modifier::BOLD)
+                .fg(Color::White),
         )
         .highlight_symbol("▶ ")
         .highlight_spacing(HighlightSpacing::Always);
