@@ -1,6 +1,8 @@
+use rayon::prelude::*;
+use std::collections::HashMap;
 use std::path::Path;
-use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
 use crate::core::size::compute_dir_size;
@@ -59,8 +61,6 @@ impl ScanEngine {
         let dirs_count = Arc::new(AtomicUsize::new(0));
         let dirs_count_clone = dirs_count.clone();
 
-        let mut projects = Vec::new();
-
         let walker = jwalk::WalkDir::new(root)
             .follow_links(false)
             .skip_hidden(false)
@@ -74,6 +74,9 @@ impl ScanEngine {
                     }
                 }
             });
+
+        // Phase 1: Rapid Traversal & Project Candidate Identification
+        let mut candidates = Vec::new();
 
         for entry_res in walker {
             let entry = match entry_res {
@@ -90,50 +93,64 @@ impl ScanEngine {
                 }
 
                 let dir_path = entry.path();
-
                 let matched_detectors = self.registry.detect_all(&dir_path);
                 for detector in matched_detectors {
                     let targets = detector.get_artifacts(&dir_path);
-                    let mut discovered_artifacts = Vec::new();
-
-                    for target in targets {
-                        let artifact_path = dir_path.join(&target.rel_path);
-                        if artifact_path.exists() {
-                            let size = compute_dir_size(&artifact_path);
-                            discovered_artifacts.push(DiscoveredArtifact {
-                                target,
-                                abs_path: artifact_path,
-                                size_bytes: size,
-                            });
-                        }
-                    }
-
-                    if !discovered_artifacts.is_empty() {
-                        let git_info = GitAnalyzer::analyze(&dir_path);
-
-                        if let Some(min_days) = self.stale_days_filter {
-                            let is_stale = match &git_info {
-                                Some(info) => match info.last_commit_days {
-                                    Some(days) => days >= min_days,
-                                    None => false,
-                                },
-                                None => false,
-                            };
-                            if !is_stale {
-                                continue;
-                            }
-                        }
-
-                        projects.push(DiscoveredProject {
-                            root: dir_path.clone(),
-                            project_type: detector.name(),
-                            artifacts: discovered_artifacts,
-                            git_info,
-                        });
+                    if targets.iter().any(|t| dir_path.join(&t.rel_path).exists()) {
+                        candidates.push((dir_path.clone(), detector.name(), targets));
                     }
                 }
             }
         }
+
+        // Phase 2: Parallel Artifact Sizing & Cached Git Introspection via Rayon
+        let git_cache = Mutex::new(HashMap::new());
+        let stale_days_filter = self.stale_days_filter;
+
+        let projects: Vec<DiscoveredProject> = candidates
+            .into_par_iter()
+            .filter_map(|(dir_path, project_type, targets)| {
+                let mut discovered_artifacts = Vec::new();
+
+                for target in targets {
+                    let artifact_path = dir_path.join(&target.rel_path);
+                    if artifact_path.exists() {
+                        let size = compute_dir_size(&artifact_path);
+                        discovered_artifacts.push(DiscoveredArtifact {
+                            target,
+                            abs_path: artifact_path,
+                            size_bytes: size,
+                        });
+                    }
+                }
+
+                if discovered_artifacts.is_empty() {
+                    return None;
+                }
+
+                let git_info = GitAnalyzer::analyze_with_cache(&dir_path, Some(&git_cache));
+
+                if let Some(min_days) = stale_days_filter {
+                    let is_stale = match &git_info {
+                        Some(info) => match info.last_commit_days {
+                            Some(days) => days >= min_days,
+                            None => false,
+                        },
+                        None => false,
+                    };
+                    if !is_stale {
+                        return None;
+                    }
+                }
+
+                Some(DiscoveredProject {
+                    root: dir_path,
+                    project_type,
+                    artifacts: discovered_artifacts,
+                    git_info,
+                })
+            })
+            .collect();
 
         let elapsed = start.elapsed();
         let final_count = dirs_count.load(Ordering::Relaxed);

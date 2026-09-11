@@ -11,26 +11,20 @@ pub fn allocated_size(len: u64) -> u64 {
 }
 
 pub fn compute_dir_size(path: &Path) -> u64 {
-    let mut total_size = 0u64;
-
-    if let Ok(entries) = std::fs::read_dir(path) {
-        for entry in entries.flatten() {
-            if let Ok(file_type) = entry.file_type() {
-                if file_type.is_symlink() {
-                    continue;
-                }
-                if file_type.is_dir() {
-                    total_size += compute_dir_size(&entry.path());
-                } else if file_type.is_file()
-                    && let Ok(meta) = entry.metadata()
-                {
-                    total_size += allocated_size(meta.len());
-                }
+    jwalk::WalkDir::new(path)
+        .skip_hidden(false)
+        .follow_links(false)
+        .into_iter()
+        .filter_map(|e| e.ok())
+        .filter(|e| e.file_type.is_file())
+        .map(|e| {
+            if let Ok(meta) = e.metadata() {
+                allocated_size(meta.len())
+            } else {
+                0
             }
-        }
-    }
-
-    total_size
+        })
+        .sum()
 }
 
 pub fn format_bytes(bytes: u64) -> String {
