@@ -402,15 +402,32 @@ fn draw_ui(f: &mut Frame, app: &mut TuiApp) {
                 .bg(Color::Cyan)
                 .add_modifier(Modifier::BOLD),
         ),
-        Span::raw(" High-Performance Git-Aware Workspace Cleaner  "),
         Span::styled(
-            format!(
-                "| Inspected {} dirs in {:.2}s | {} projects found",
-                app.stats.dirs_inspected,
-                app.stats.duration.as_secs_f64(),
-                app.projects.len()
-            ),
-            Style::default().fg(Color::DarkGray),
+            " High-Performance Git-Aware Workspace Cleaner",
+            Style::default()
+                .fg(Color::White)
+                .add_modifier(Modifier::BOLD),
+        ),
+        Span::styled("  │  Inspected ", Style::default().fg(Color::Gray)),
+        Span::styled(
+            format!("{} dirs", app.stats.dirs_inspected),
+            Style::default()
+                .fg(Color::Cyan)
+                .add_modifier(Modifier::BOLD),
+        ),
+        Span::styled(" in ", Style::default().fg(Color::Gray)),
+        Span::styled(
+            format!("{:.2}s", app.stats.duration.as_secs_f64()),
+            Style::default()
+                .fg(Color::Yellow)
+                .add_modifier(Modifier::BOLD),
+        ),
+        Span::styled("  │  ", Style::default().fg(Color::Gray)),
+        Span::styled(
+            format!("{} projects found", app.projects.len()),
+            Style::default()
+                .fg(Color::Green)
+                .add_modifier(Modifier::BOLD),
         ),
     ])];
     let header_block = Paragraph::new(header_text).block(
@@ -507,16 +524,38 @@ fn draw_table(f: &mut Frame, app: &mut TuiApp, area: Rect) {
         .collect();
 
     let header = Row::new(vec![
-        Span::styled("SEL", Style::default().add_modifier(Modifier::BOLD)),
+        Span::styled(
+            "SEL",
+            Style::default()
+                .fg(Color::Cyan)
+                .add_modifier(Modifier::BOLD),
+        ),
         Span::styled(
             "PROJECT PATH",
-            Style::default().add_modifier(Modifier::BOLD),
+            Style::default()
+                .fg(Color::Cyan)
+                .add_modifier(Modifier::BOLD),
         ),
-        Span::styled("TYPE", Style::default().add_modifier(Modifier::BOLD)),
-        Span::styled("GIT STATUS", Style::default().add_modifier(Modifier::BOLD)),
-        Span::styled("RECLAIMABLE", Style::default().add_modifier(Modifier::BOLD)),
+        Span::styled(
+            "TYPE",
+            Style::default()
+                .fg(Color::Cyan)
+                .add_modifier(Modifier::BOLD),
+        ),
+        Span::styled(
+            "GIT STATUS",
+            Style::default()
+                .fg(Color::Cyan)
+                .add_modifier(Modifier::BOLD),
+        ),
+        Span::styled(
+            "RECLAIMABLE",
+            Style::default()
+                .fg(Color::Cyan)
+                .add_modifier(Modifier::BOLD),
+        ),
     ])
-    .style(Style::default().fg(Color::DarkGray))
+    .style(Style::default().bg(Color::Rgb(22, 30, 48)))
     .bottom_margin(1);
 
     let widths = [
@@ -554,18 +593,28 @@ fn draw_inspector(f: &mut Frame, app: &TuiApp, area: Rect) {
     let content = if let Some(p) = app.projects.get(app.cursor_index) {
         let mut lines = Vec::new();
         lines.push(Line::from(vec![
-            Span::styled("Project Root: ", Style::default().fg(Color::DarkGray)),
+            Span::styled(
+                "Project Root: ",
+                Style::default()
+                    .fg(Color::Cyan)
+                    .add_modifier(Modifier::BOLD),
+            ),
             Span::styled(
                 p.root.display().to_string(),
                 Style::default().fg(Color::White),
             ),
         ]));
         lines.push(Line::from(vec![
-            Span::styled("Ecosystem:    ", Style::default().fg(Color::DarkGray)),
+            Span::styled(
+                "Ecosystem:    ",
+                Style::default()
+                    .fg(Color::Cyan)
+                    .add_modifier(Modifier::BOLD),
+            ),
             Span::styled(
                 p.project_type.to_string(),
                 Style::default()
-                    .fg(Color::Cyan)
+                    .fg(Color::Green)
                     .add_modifier(Modifier::BOLD),
             ),
         ]));
@@ -578,11 +627,21 @@ fn draw_inspector(f: &mut Frame, app: &TuiApp, area: Rect) {
                 None => "No commits found".to_string(),
             };
             lines.push(Line::from(vec![
-                Span::styled("Last Commit:  ", Style::default().fg(Color::DarkGray)),
+                Span::styled(
+                    "Last Commit:  ",
+                    Style::default()
+                        .fg(Color::Cyan)
+                        .add_modifier(Modifier::BOLD),
+                ),
                 Span::styled(commit_age, Style::default().fg(Color::Yellow)),
             ]));
             lines.push(Line::from(vec![
-                Span::styled("Worktree:     ", Style::default().fg(Color::DarkGray)),
+                Span::styled(
+                    "Worktree:     ",
+                    Style::default()
+                        .fg(Color::Cyan)
+                        .add_modifier(Modifier::BOLD),
+                ),
                 if git.is_dirty {
                     Span::styled(
                         "Uncommitted changes present (Dirty)",
@@ -594,8 +653,13 @@ fn draw_inspector(f: &mut Frame, app: &TuiApp, area: Rect) {
             ]));
         } else {
             lines.push(Line::from(vec![
-                Span::styled("Git:          ", Style::default().fg(Color::DarkGray)),
-                Span::styled("Not a Git repository", Style::default().fg(Color::DarkGray)),
+                Span::styled(
+                    "Git:          ",
+                    Style::default()
+                        .fg(Color::Cyan)
+                        .add_modifier(Modifier::BOLD),
+                ),
+                Span::styled("Not a Git repository", Style::default().fg(Color::Yellow)),
             ]));
         }
 
@@ -687,22 +751,60 @@ fn draw_gauge(f: &mut Frame, app: &TuiApp, area: Rect) {
 }
 
 fn draw_footer(f: &mut Frame, app: &TuiApp, area: Rect) {
-    let (msg_span, msg_border_style) = if let Some((ref msg, style)) = app.notification_message {
+    let (footer_line, msg_border_style) = if let Some((ref msg, style)) = app.notification_message {
         (
-            Span::styled(msg.clone(), style),
+            Line::from(vec![Span::styled(msg.clone(), style)]),
             Style::default().fg(Color::Yellow),
         )
     } else {
         (
-            Span::styled(
-                "[↑/k] Up  [↓/j] Down  [Space] Toggle  [a] Toggle All  [d] Clean Selected  [q/Esc] Exit",
-                Style::default().fg(Color::DarkGray),
-            ),
-            Style::default().fg(Color::DarkGray),
+            Line::from(vec![
+                Span::styled(
+                    "[↑/k] ",
+                    Style::default()
+                        .fg(Color::Cyan)
+                        .add_modifier(Modifier::BOLD),
+                ),
+                Span::styled("Up  ", Style::default().fg(Color::White)),
+                Span::styled(
+                    "[↓/j] ",
+                    Style::default()
+                        .fg(Color::Cyan)
+                        .add_modifier(Modifier::BOLD),
+                ),
+                Span::styled("Down  ", Style::default().fg(Color::White)),
+                Span::styled(
+                    "[Space] ",
+                    Style::default()
+                        .fg(Color::Yellow)
+                        .add_modifier(Modifier::BOLD),
+                ),
+                Span::styled("Toggle  ", Style::default().fg(Color::White)),
+                Span::styled(
+                    "[a] ",
+                    Style::default()
+                        .fg(Color::Yellow)
+                        .add_modifier(Modifier::BOLD),
+                ),
+                Span::styled("Toggle All  ", Style::default().fg(Color::White)),
+                Span::styled(
+                    "[d] ",
+                    Style::default().fg(Color::Red).add_modifier(Modifier::BOLD),
+                ),
+                Span::styled("Clean Selected  ", Style::default().fg(Color::White)),
+                Span::styled(
+                    "[q/Esc] ",
+                    Style::default()
+                        .fg(Color::LightMagenta)
+                        .add_modifier(Modifier::BOLD),
+                ),
+                Span::styled("Exit", Style::default().fg(Color::White)),
+            ]),
+            Style::default().fg(Color::Rgb(80, 90, 120)),
         )
     };
 
-    let footer = Paragraph::new(Line::from(vec![msg_span]))
+    let footer = Paragraph::new(footer_line)
         .alignment(Alignment::Center)
         .block(
             Block::default()
