@@ -18,10 +18,9 @@ pub fn print_scan_header(path_str: &str, stats: &ScanStats) {
         println!("{}", style(line).cyan().bold());
     }
     println!(
-        "  {} {}",
-        style("⚡").yellow().bold(),
-        style("High-Performance Git-Aware Workspace Cleaner")
-            .white()
+        "  {}",
+        style(chrono::Local::now().format("%Y-%m-%d %H:%M:%S").to_string())
+            .cyan()
             .bold()
     );
     println!(

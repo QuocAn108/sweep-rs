@@ -522,9 +522,9 @@ fn draw_ui(f: &mut Frame, app: &mut TuiApp) {
         }
         text.push(Line::from(vec![
             Span::styled(
-                "⚡ High-Performance Git-Aware Workspace Cleaner",
+                chrono::Local::now().format("%Y-%m-%d %H:%M:%S").to_string(),
                 Style::default()
-                    .fg(Color::White)
+                    .fg(Color::Rgb(140, 185, 255))
                     .add_modifier(Modifier::BOLD),
             ),
             Span::styled("  │  Inspected ", Style::default().fg(Color::Gray)),
@@ -566,9 +566,9 @@ fn draw_ui(f: &mut Frame, app: &mut TuiApp) {
                     .add_modifier(Modifier::BOLD),
             ),
             Span::styled(
-                " High-Performance Git-Aware Workspace Cleaner",
+                format!(" {}", chrono::Local::now().format("%Y-%m-%d %H:%M:%S")),
                 Style::default()
-                    .fg(Color::White)
+                    .fg(Color::Rgb(140, 185, 255))
                     .add_modifier(Modifier::BOLD),
             ),
             Span::styled("  │  Inspected ", Style::default().fg(Color::Gray)),
