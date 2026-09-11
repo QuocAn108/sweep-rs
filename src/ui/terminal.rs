@@ -4,13 +4,32 @@ use crate::core::traits::{DiscoveredProject, GitStatus};
 use console::{Alignment, pad_str, style};
 
 pub fn print_scan_header(path_str: &str, stats: &ScanStats) {
+    let banner = [
+        r"███████╗██╗    ██╗███████╗███████╗██████╗       ██████╗ ███████╗",
+        r"██╔════╝██║    ██║██╔════╝██╔════╝██╔══██╗      ██╔══██╗██╔════╝",
+        r"███████╗██║ █╗ ██║█████╗  █████╗  ██████╔╝█████╗██████╔╝███████╗",
+        r"╚════██║██║███╗██║██╔══╝  ██╔══╝  ██╔═══╝ ╚════╝██╔══██╗╚════██║",
+        r"███████║╚███╔███╔╝███████╗███████╗██║           ██║  ██║███████║",
+        r"╚══════╝ ╚══╝╚══╝ ╚══════╝╚══════╝╚═╝           ╚═╝  ╚═╝╚══════╝",
+    ];
+
+    println!();
+    for line in banner {
+        println!("{}", style(line).cyan().bold());
+    }
     println!(
-        "\n{} Scanning: {} ... {} in {:.2}s ({} dirs inspected)\n",
-        style("[SWEEP-RS]").cyan().bold(),
+        "  {} {}",
+        style("⚡").yellow().bold(),
+        style("High-Performance Git-Aware Workspace Cleaner")
+            .white()
+            .bold()
+    );
+    println!(
+        "  {} Target: {} │ Inspected {} dirs in {:.2}s\n",
+        style("📂").cyan(),
         style(path_str).yellow(),
-        style("Done").green().bold(),
-        stats.duration.as_secs_f64(),
-        stats.dirs_inspected
+        style(stats.dirs_inspected).cyan().bold(),
+        stats.duration.as_secs_f64()
     );
 }
 

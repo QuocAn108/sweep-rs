@@ -487,59 +487,119 @@ fn run_app_loop(
 fn draw_ui(f: &mut Frame, app: &mut TuiApp) {
     let size = f.area();
 
+    let show_big_banner = size.height >= 34 && size.width >= 72;
+    let header_height = if show_big_banner { 9 } else { 3 };
+
     // Main layout: Header, Central Body, Footer
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Length(3),
+            Constraint::Length(header_height),
             Constraint::Min(10),
             Constraint::Length(3),
         ])
         .split(size);
 
     // 1. Header
-    let header_text = vec![Line::from(vec![
-        Span::styled(
-            " SWEEP-RS ",
-            Style::default()
-                .fg(Color::Black)
-                .bg(Color::Cyan)
-                .add_modifier(Modifier::BOLD),
-        ),
-        Span::styled(
-            " High-Performance Git-Aware Workspace Cleaner",
-            Style::default()
-                .fg(Color::White)
-                .add_modifier(Modifier::BOLD),
-        ),
-        Span::styled("  │  Inspected ", Style::default().fg(Color::Gray)),
-        Span::styled(
-            format!("{} dirs", app.stats.dirs_inspected),
-            Style::default()
-                .fg(Color::Cyan)
-                .add_modifier(Modifier::BOLD),
-        ),
-        Span::styled(" in ", Style::default().fg(Color::Gray)),
-        Span::styled(
-            format!("{:.2}s", app.stats.duration.as_secs_f64()),
-            Style::default()
-                .fg(Color::Yellow)
-                .add_modifier(Modifier::BOLD),
-        ),
-        Span::styled("  │  ", Style::default().fg(Color::Gray)),
-        Span::styled(
-            format!("{} projects found", app.projects.len()),
-            Style::default()
-                .fg(Color::Green)
-                .add_modifier(Modifier::BOLD),
-        ),
-    ])];
-    let header_block = Paragraph::new(header_text).block(
-        Block::default()
-            .borders(Borders::ALL)
-            .border_type(BorderType::Rounded)
-            .border_style(Style::default().fg(Color::Cyan)),
-    );
+    let header_block = if show_big_banner {
+        let ascii_lines = [
+            "███████╗██╗    ██╗███████╗███████╗██████╗       ██████╗ ███████╗",
+            "██╔════╝██║    ██║██╔════╝██╔════╝██╔══██╗      ██╔══██╗██╔════╝",
+            "███████╗██║ █╗ ██║█████╗  █████╗  ██████╔╝█████╗██████╔╝███████╗",
+            "╚════██║██║███╗██║██╔══╝  ██╔══╝  ██╔═══╝ ╚════╝██╔══██╗╚════██║",
+            "███████║╚███╔███╔╝███████╗███████╗██║           ██║  ██║███████║",
+            "╚══════╝ ╚══╝╚══╝ ╚══════╝╚══════╝╚═╝           ╚═╝  ╚═╝╚══════╝",
+        ];
+
+        let mut text = Vec::new();
+        for line in ascii_lines {
+            text.push(Line::from(Span::styled(
+                line,
+                Style::default()
+                    .fg(Color::Cyan)
+                    .add_modifier(Modifier::BOLD),
+            )));
+        }
+        text.push(Line::from(vec![
+            Span::styled(
+                "⚡ High-Performance Git-Aware Workspace Cleaner",
+                Style::default()
+                    .fg(Color::White)
+                    .add_modifier(Modifier::BOLD),
+            ),
+            Span::styled("  │  Inspected ", Style::default().fg(Color::Gray)),
+            Span::styled(
+                format!("{} dirs", app.stats.dirs_inspected),
+                Style::default()
+                    .fg(Color::Cyan)
+                    .add_modifier(Modifier::BOLD),
+            ),
+            Span::styled(" in ", Style::default().fg(Color::Gray)),
+            Span::styled(
+                format!("{:.2}s", app.stats.duration.as_secs_f64()),
+                Style::default()
+                    .fg(Color::Yellow)
+                    .add_modifier(Modifier::BOLD),
+            ),
+            Span::styled("  │  ", Style::default().fg(Color::Gray)),
+            Span::styled(
+                format!("{} projects found", app.projects.len()),
+                Style::default()
+                    .fg(Color::Green)
+                    .add_modifier(Modifier::BOLD),
+            ),
+        ]));
+
+        Paragraph::new(text).alignment(Alignment::Center).block(
+            Block::default()
+                .borders(Borders::ALL)
+                .border_type(BorderType::Rounded)
+                .border_style(Style::default().fg(Color::Cyan)),
+        )
+    } else {
+        let header_text = vec![Line::from(vec![
+            Span::styled(
+                " SWEEP-RS ",
+                Style::default()
+                    .fg(Color::Black)
+                    .bg(Color::Cyan)
+                    .add_modifier(Modifier::BOLD),
+            ),
+            Span::styled(
+                " High-Performance Git-Aware Workspace Cleaner",
+                Style::default()
+                    .fg(Color::White)
+                    .add_modifier(Modifier::BOLD),
+            ),
+            Span::styled("  │  Inspected ", Style::default().fg(Color::Gray)),
+            Span::styled(
+                format!("{} dirs", app.stats.dirs_inspected),
+                Style::default()
+                    .fg(Color::Cyan)
+                    .add_modifier(Modifier::BOLD),
+            ),
+            Span::styled(" in ", Style::default().fg(Color::Gray)),
+            Span::styled(
+                format!("{:.2}s", app.stats.duration.as_secs_f64()),
+                Style::default()
+                    .fg(Color::Yellow)
+                    .add_modifier(Modifier::BOLD),
+            ),
+            Span::styled("  │  ", Style::default().fg(Color::Gray)),
+            Span::styled(
+                format!("{} projects found", app.projects.len()),
+                Style::default()
+                    .fg(Color::Green)
+                    .add_modifier(Modifier::BOLD),
+            ),
+        ])];
+        Paragraph::new(header_text).block(
+            Block::default()
+                .borders(Borders::ALL)
+                .border_type(BorderType::Rounded)
+                .border_style(Style::default().fg(Color::Cyan)),
+        )
+    };
     f.render_widget(header_block, chunks[0]);
 
     // 2. Central Body: Split into Left (Table 60%) and Right (Details + Gauge 40%)
