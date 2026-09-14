@@ -32,30 +32,30 @@ pub struct Palette;
 
 impl Palette {
     // Primary & Accent Colors
-    pub const CYAN: Color = Color::Rgb(0, 215, 255);          // Electric Cyan
-    pub const BLUE: Color = Color::Rgb(85, 170, 255);         // Electric Royal Blue
-    pub const PURPLE: Color = Color::Rgb(190, 125, 255);       // Vibrant Purple
-    pub const PINK: Color = Color::Rgb(255, 140, 200);        // Neon Pink
-    pub const TEAL: Color = Color::Rgb(80, 235, 210);         // Neon Teal
+    pub const CYAN: Color = Color::Rgb(0, 215, 255); // Electric Cyan
+    pub const BLUE: Color = Color::Rgb(85, 170, 255); // Electric Royal Blue
+    pub const PURPLE: Color = Color::Rgb(190, 125, 255); // Vibrant Purple
+    pub const PINK: Color = Color::Rgb(255, 140, 200); // Neon Pink
+    pub const TEAL: Color = Color::Rgb(80, 235, 210); // Neon Teal
 
     // Status Colors
     pub const SUCCESS_GREEN: Color = Color::Rgb(75, 235, 130); // Neon Green
     pub const WARNING_YELLOW: Color = Color::Rgb(255, 215, 75); // Bright Amber
-    pub const ORANGE: Color = Color::Rgb(255, 145, 75);        // Neon Peach/Orange
-    pub const DANGER_RED: Color = Color::Rgb(255, 85, 95);     // Crimson Red
+    pub const ORANGE: Color = Color::Rgb(255, 145, 75); // Neon Peach/Orange
+    pub const DANGER_RED: Color = Color::Rgb(255, 85, 95); // Crimson Red
 
     // Neutral & Text Colors
-    pub const TEXT_MAIN: Color = Color::Rgb(255, 255, 255);     // Crisp Pure White
-    pub const TEXT_MUTED: Color = Color::Rgb(170, 185, 215);    // Readable Light Gray/Blue
-    pub const TEXT_DIM: Color = Color::Rgb(110, 125, 155);      // Muted Slate
-    pub const TEXT_DARK: Color = Color::Rgb(10, 15, 25);        // Dark badge text
+    pub const TEXT_MAIN: Color = Color::Rgb(255, 255, 255); // Crisp Pure White
+    pub const TEXT_MUTED: Color = Color::Rgb(170, 185, 215); // Readable Light Gray/Blue
+    pub const TEXT_DIM: Color = Color::Rgb(110, 125, 155); // Muted Slate
+    pub const TEXT_DARK: Color = Color::Rgb(10, 15, 25); // Dark badge text
 
     // Borders & Background Highlights
-    pub const BORDER_CYAN: Color = Color::Rgb(0, 215, 255);    // Electric Cyan Border
+    pub const BORDER_CYAN: Color = Color::Rgb(0, 215, 255); // Electric Cyan Border
     pub const BORDER_PRIMARY: Color = Color::Rgb(70, 130, 220); // Vibrant Electric Blue Border (Glow frame)
-    pub const BORDER_ALERT: Color = Color::Rgb(255, 85, 95);    // Red Alert Border
-    pub const BG_HIGHLIGHT: Color = Color::Rgb(25, 45, 75);     // Subtle Dark Indigo Row Highlight
-    pub const BG_DARK: Color = Color::Rgb(17, 17, 27);          // Dark badge background
+    pub const BORDER_ALERT: Color = Color::Rgb(255, 85, 95); // Red Alert Border
+    pub const BG_HIGHLIGHT: Color = Color::Rgb(25, 45, 75); // Subtle Dark Indigo Row Highlight
+    pub const BG_DARK: Color = Color::Rgb(17, 17, 27); // Dark badge background
 }
 
 // =========================================================================
@@ -748,10 +748,9 @@ fn draw_table(f: &mut Frame, app: &mut TuiApp, area: Rect) {
                                     "▲ Active".to_string(),
                                     Style::default().fg(Palette::WARNING_YELLOW),
                                 ),
-                                GitStatus::Moderate => (
-                                    "◆ Moderate".to_string(),
-                                    Style::default().fg(Palette::CYAN),
-                                ),
+                                GitStatus::Moderate => {
+                                    ("◆ Moderate".to_string(), Style::default().fg(Palette::CYAN))
+                                }
                                 GitStatus::Unknown => (
                                     "? Unknown".to_string(),
                                     Style::default().fg(Palette::TEXT_DIM),
@@ -1202,10 +1201,7 @@ fn draw_gauge(f: &mut Frame, app: &TuiApp, area: Rect) {
     } else {
         if rust_count > 0 {
             lines.push(Line::from(vec![
-                Span::styled(
-                    "  🦀 Rust:    ",
-                    Style::default().fg(Palette::ORANGE),
-                ),
+                Span::styled("  🦀 Rust:    ", Style::default().fg(Palette::ORANGE)),
                 Span::styled(
                     format_bytes(rust_bytes),
                     Style::default()
@@ -1238,10 +1234,7 @@ fn draw_gauge(f: &mut Frame, app: &TuiApp, area: Rect) {
         }
         if dotnet_count > 0 {
             lines.push(Line::from(vec![
-                Span::styled(
-                    "  🟣 .NET:    ",
-                    Style::default().fg(Palette::PURPLE),
-                ),
+                Span::styled("  🟣 .NET:    ", Style::default().fg(Palette::PURPLE)),
                 Span::styled(
                     format_bytes(dotnet_bytes),
                     Style::default()
@@ -1256,10 +1249,7 @@ fn draw_gauge(f: &mut Frame, app: &TuiApp, area: Rect) {
         }
         if python_count > 0 {
             lines.push(Line::from(vec![
-                Span::styled(
-                    "  🐍 Python:  ",
-                    Style::default().fg(Palette::CYAN),
-                ),
+                Span::styled("  🐍 Python:  ", Style::default().fg(Palette::CYAN)),
                 Span::styled(
                     format_bytes(python_bytes),
                     Style::default()
@@ -1487,10 +1477,7 @@ fn draw_footer(f: &mut Frame, app: &TuiApp, area: Rect) {
                 ));
             }
 
-            spans.push(Span::styled(
-                " │ ",
-                Style::default().fg(Palette::TEXT_DIM),
-            ));
+            spans.push(Span::styled(" │ ", Style::default().fg(Palette::TEXT_DIM)));
             spans.push(Span::styled(
                 " d ",
                 Style::default()
@@ -1504,10 +1491,7 @@ fn draw_footer(f: &mut Frame, app: &TuiApp, area: Rect) {
                     .fg(Palette::PINK)
                     .add_modifier(Modifier::BOLD),
             ));
-            spans.push(Span::styled(
-                " │ ",
-                Style::default().fg(Palette::TEXT_DIM),
-            ));
+            spans.push(Span::styled(" │ ", Style::default().fg(Palette::TEXT_DIM)));
             spans.push(Span::styled(
                 " q/Esc ",
                 Style::default()
@@ -1562,10 +1546,7 @@ fn draw_confirm_dialog(f: &mut Frame, app: &TuiApp, area: Rect) {
         )]),
         Line::raw(""),
         Line::from(vec![
-            Span::styled(
-                "  Targets:    ",
-                Style::default().fg(Palette::TEXT_MUTED),
-            ),
+            Span::styled("  Targets:    ", Style::default().fg(Palette::TEXT_MUTED)),
             Span::styled(
                 format!("{} artifact(s)", app.selected_artifacts_count()),
                 Style::default()
@@ -1581,26 +1562,17 @@ fn draw_confirm_dialog(f: &mut Frame, app: &TuiApp, area: Rect) {
             ),
         ]),
         Line::from(vec![
-            Span::styled(
-                "  Reclaim:    ",
-                Style::default().fg(Palette::TEXT_MUTED),
-            ),
+            Span::styled("  Reclaim:    ", Style::default().fg(Palette::TEXT_MUTED)),
             Span::styled(
                 format_bytes(app.selected_reclaimable_bytes()),
                 Style::default()
                     .fg(Palette::SUCCESS_GREEN)
                     .add_modifier(Modifier::BOLD),
             ),
-            Span::styled(
-                " of disk space",
-                Style::default().fg(Palette::TEXT_MUTED),
-            ),
+            Span::styled(" of disk space", Style::default().fg(Palette::TEXT_MUTED)),
         ]),
         Line::from(vec![
-            Span::styled(
-                "  Safety:     ",
-                Style::default().fg(Palette::TEXT_MUTED),
-            ),
+            Span::styled("  Safety:     ", Style::default().fg(Palette::TEXT_MUTED)),
             Span::styled(
                 "Atomic rename to .sweep-trash (safe rollback)",
                 Style::default().fg(Palette::CYAN),
