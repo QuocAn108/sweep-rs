@@ -28,7 +28,7 @@ jobs:
             target: aarch64-apple-darwin
             artifact_name: sweep-rs-macos-arm64.tar.gz
             binary_name: sweep-rs
-          - os: macos-13
+          - os: macos-latest
             target: x86_64-apple-darwin
             artifact_name: sweep-rs-macos-x86_64.tar.gz
             binary_name: sweep-rs
