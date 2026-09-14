@@ -10,6 +10,7 @@
 # sweep-rs 🧹
 
 [![CI](https://github.com/QuocAn108/sweep-rs/actions/workflows/ci.yml/badge.svg)](https://github.com/QuocAn108/sweep-rs/actions/workflows/ci.yml)
+[![Crates.io](https://img.shields.io/crates/v/sweep-rs.svg)](https://crates.io/crates/sweep-rs)
 [![Release](https://img.shields.io/github/v/release/QuocAn108/sweep-rs)](https://github.com/QuocAn108/sweep-rs/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Rust Edition](https://img.shields.io/badge/Rust-2024%20Edition-orange.svg)](https://www.rust-lang.org)
@@ -38,19 +39,26 @@
 
 | Feature | `sweep-rs` | `cargo-sweep` | `kondo` | `npkill` |
 | :--- | :---: | :---: | :---: | :---: |
-| **Language Ecosystems** | **Rust, Node, Python, .NET** | Rust only | Rust, Node, Python, JVM | Node only |
+| **Language Ecosystems** | **Rust, Node, Python, .NET** | Rust only | 20+ Ecosystems | Node only |
 | **Git Awareness (Commit Age & Dirty State)** | ✅ **Native (`libgit2`)** | ⚠️ Limited | ❌ No | ❌ No |
 | **Traversal Speed** | 🚀 **Parallel (`jwalk`)** | Standard | Standard | Node.js Single-thread |
-| **Fast Deletion Mechanism** | ⚡ **$O(1)$ Atomic Rename** | Direct deletion | Direct deletion | Direct deletion |
-| **Fullscreen TUI Dashboard** | ✅ **Yes (`ratatui`)** | ❌ No | ❌ No | ⚠️ Basic list |
+| **Deletion Safety** | ⚡ **$O(1)$ Atomic Trash** | Direct deletion | Direct deletion | Direct deletion |
+| **Built-in Interactive TUI** | ✅ **Native (`--tui`)** | ❌ No | ⚠️ Requires GUI (`kondo-ui`) | ⚠️ Basic list |
 | **Early Subtree Pruning** | ✅ **Yes** | ❌ No | ⚠️ Limited | ❌ No |
 
 ---
 
 ## 🚀 Installation
 
-### Using Cargo
+### From Crates.io
 ```bash
+cargo install sweep-rs
+```
+
+### From Source
+```bash
+git clone https://github.com/QuocAn108/sweep-rs.git
+cd sweep-rs
 cargo install --path .
 ```
 
@@ -181,6 +189,19 @@ impl ProjectDetector for GoDetector {
 ```
 
 Register your detector in `DetectorRegistry` and it will automatically participate in parallel early-pruned scans!
+
+---
+
+## 🔗 Similar Projects & References
+
+If you're interested in workspace cleanup tools, check out these existing projects in the ecosystem:
+
+* [Kondo](https://github.com/tbillington/kondo) - CLI and GUI tool for cleaning project build artifacts.
+* [npkill](https://github.com/voidcosmos/npkill) - Popular Node.js tool to quickly list and delete `node_modules`.
+* [cargo-sweep](https://github.com/holmboe/cargo-sweep) - A Cargo subcommand for cleaning unused Rust `target` folders.
+* [cargo-clean-recursive](https://github.com/d-k-bo/cargo-clean-recursive) - Recursively clean Cargo target directories.
+* [Detox](https://github.com/jessesquires/detox) - CLI tool for cleaning build directories.
+* [The Tin Summer](https://github.com/vrothberg/the-tin-summer) - Fast CLI disk usage analyzer and cleaner.
 
 ---
 
