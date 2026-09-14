@@ -25,6 +25,40 @@ use crate::core::size::format_bytes;
 use crate::core::traits::{DiscoveredProject, GitInfo, GitStatus, ProjectType};
 
 // =========================================================================
+// Unified 24-bit TrueColor Palette (Vibrant Electric Neon Theme)
+// Guarantees identical, rich visual appearance across all terminals & OSes
+// =========================================================================
+pub struct Palette;
+
+impl Palette {
+    // Primary & Accent Colors
+    pub const CYAN: Color = Color::Rgb(0, 215, 255);          // Electric Cyan
+    pub const BLUE: Color = Color::Rgb(85, 170, 255);         // Electric Royal Blue
+    pub const PURPLE: Color = Color::Rgb(190, 125, 255);       // Vibrant Purple
+    pub const PINK: Color = Color::Rgb(255, 140, 200);        // Neon Pink
+    pub const TEAL: Color = Color::Rgb(80, 235, 210);         // Neon Teal
+
+    // Status Colors
+    pub const SUCCESS_GREEN: Color = Color::Rgb(75, 235, 130); // Neon Green
+    pub const WARNING_YELLOW: Color = Color::Rgb(255, 215, 75); // Bright Amber
+    pub const ORANGE: Color = Color::Rgb(255, 145, 75);        // Neon Peach/Orange
+    pub const DANGER_RED: Color = Color::Rgb(255, 85, 95);     // Crimson Red
+
+    // Neutral & Text Colors
+    pub const TEXT_MAIN: Color = Color::Rgb(255, 255, 255);     // Crisp Pure White
+    pub const TEXT_MUTED: Color = Color::Rgb(170, 185, 215);    // Readable Light Gray/Blue
+    pub const TEXT_DIM: Color = Color::Rgb(110, 125, 155);      // Muted Slate
+    pub const TEXT_DARK: Color = Color::Rgb(10, 15, 25);        // Dark badge text
+
+    // Borders & Background Highlights
+    pub const BORDER_CYAN: Color = Color::Rgb(0, 215, 255);    // Electric Cyan Border
+    pub const BORDER_PRIMARY: Color = Color::Rgb(70, 130, 220); // Vibrant Electric Blue Border (Glow frame)
+    pub const BORDER_ALERT: Color = Color::Rgb(255, 85, 95);    // Red Alert Border
+    pub const BG_HIGHLIGHT: Color = Color::Rgb(25, 45, 75);     // Subtle Dark Indigo Row Highlight
+    pub const BG_DARK: Color = Color::Rgb(17, 17, 27);          // Dark badge background
+}
+
+// =========================================================================
 // 1. Inquire Selection Prompt (Lightweight CLI Checkbox Mode)
 // =========================================================================
 
@@ -303,7 +337,7 @@ impl TuiApp {
             self.notification_message = Some((
                 "[DRY-RUN] Clean simulated: No files were touched.".to_string(),
                 Style::default()
-                    .fg(Color::Cyan)
+                    .fg(Palette::CYAN)
                     .add_modifier(Modifier::BOLD),
             ));
             return;
@@ -328,7 +362,7 @@ impl TuiApp {
                         Err(e) => {
                             self.notification_message = Some((
                                 format!("Error cleaning {}: {}", artifact.target.name, e),
-                                Style::default().fg(Color::Red),
+                                Style::default().fg(Palette::DANGER_RED),
                             ));
                         }
                     }
@@ -358,7 +392,7 @@ impl TuiApp {
                     format_bytes(report.total_bytes_reclaimed)
                 ),
                 Style::default()
-                    .fg(Color::Green)
+                    .fg(Palette::SUCCESS_GREEN)
                     .add_modifier(Modifier::BOLD),
             ));
         }
@@ -516,7 +550,7 @@ fn draw_ui(f: &mut Frame, app: &mut TuiApp) {
             text.push(Line::from(Span::styled(
                 line,
                 Style::default()
-                    .fg(Color::Cyan)
+                    .fg(Palette::CYAN)
                     .add_modifier(Modifier::BOLD),
             )));
         }
@@ -524,28 +558,28 @@ fn draw_ui(f: &mut Frame, app: &mut TuiApp) {
             Span::styled(
                 chrono::Local::now().format("%Y-%m-%d %H:%M:%S").to_string(),
                 Style::default()
-                    .fg(Color::Rgb(140, 185, 255))
+                    .fg(Palette::BLUE)
                     .add_modifier(Modifier::BOLD),
             ),
-            Span::styled("  │  Inspected ", Style::default().fg(Color::Gray)),
+            Span::styled("  │  Inspected ", Style::default().fg(Palette::TEXT_DIM)),
             Span::styled(
                 format!("{} dirs", app.stats.dirs_inspected),
                 Style::default()
-                    .fg(Color::Cyan)
+                    .fg(Palette::CYAN)
                     .add_modifier(Modifier::BOLD),
             ),
-            Span::styled(" in ", Style::default().fg(Color::Gray)),
+            Span::styled(" in ", Style::default().fg(Palette::TEXT_DIM)),
             Span::styled(
                 format!("{:.2}s", app.stats.duration.as_secs_f64()),
                 Style::default()
-                    .fg(Color::Yellow)
+                    .fg(Palette::WARNING_YELLOW)
                     .add_modifier(Modifier::BOLD),
             ),
-            Span::styled("  │  ", Style::default().fg(Color::Gray)),
+            Span::styled("  │  ", Style::default().fg(Palette::TEXT_DIM)),
             Span::styled(
                 format!("{} projects found", app.projects.len()),
                 Style::default()
-                    .fg(Color::Green)
+                    .fg(Palette::SUCCESS_GREEN)
                     .add_modifier(Modifier::BOLD),
             ),
         ]));
@@ -554,42 +588,42 @@ fn draw_ui(f: &mut Frame, app: &mut TuiApp) {
             Block::default()
                 .borders(Borders::ALL)
                 .border_type(BorderType::Rounded)
-                .border_style(Style::default().fg(Color::Cyan)),
+                .border_style(Style::default().fg(Palette::BORDER_CYAN)),
         )
     } else {
         let header_text = vec![Line::from(vec![
             Span::styled(
                 " SWEEP-RS ",
                 Style::default()
-                    .fg(Color::Black)
-                    .bg(Color::Cyan)
+                    .fg(Palette::TEXT_DARK)
+                    .bg(Palette::CYAN)
                     .add_modifier(Modifier::BOLD),
             ),
             Span::styled(
                 format!(" {}", chrono::Local::now().format("%Y-%m-%d %H:%M:%S")),
                 Style::default()
-                    .fg(Color::Rgb(140, 185, 255))
+                    .fg(Palette::BLUE)
                     .add_modifier(Modifier::BOLD),
             ),
-            Span::styled("  │  Inspected ", Style::default().fg(Color::Gray)),
+            Span::styled("  │  Inspected ", Style::default().fg(Palette::TEXT_DIM)),
             Span::styled(
                 format!("{} dirs", app.stats.dirs_inspected),
                 Style::default()
-                    .fg(Color::Cyan)
+                    .fg(Palette::CYAN)
                     .add_modifier(Modifier::BOLD),
             ),
-            Span::styled(" in ", Style::default().fg(Color::Gray)),
+            Span::styled(" in ", Style::default().fg(Palette::TEXT_DIM)),
             Span::styled(
                 format!("{:.2}s", app.stats.duration.as_secs_f64()),
                 Style::default()
-                    .fg(Color::Yellow)
+                    .fg(Palette::WARNING_YELLOW)
                     .add_modifier(Modifier::BOLD),
             ),
-            Span::styled("  │  ", Style::default().fg(Color::Gray)),
+            Span::styled("  │  ", Style::default().fg(Palette::TEXT_DIM)),
             Span::styled(
                 format!("{} projects found", app.projects.len()),
                 Style::default()
-                    .fg(Color::Green)
+                    .fg(Palette::SUCCESS_GREEN)
                     .add_modifier(Modifier::BOLD),
             ),
         ])];
@@ -597,7 +631,7 @@ fn draw_ui(f: &mut Frame, app: &mut TuiApp) {
             Block::default()
                 .borders(Borders::ALL)
                 .border_type(BorderType::Rounded)
-                .border_style(Style::default().fg(Color::Cyan)),
+                .border_style(Style::default().fg(Palette::BORDER_CYAN)),
         )
     };
     f.render_widget(header_block, chunks[0]);
@@ -644,7 +678,7 @@ fn draw_table(f: &mut Frame, app: &mut TuiApp, area: Rect) {
             Span::styled(
                 msg,
                 Style::default()
-                    .fg(Color::Rgb(150, 165, 190))
+                    .fg(Palette::TEXT_MUTED)
                     .add_modifier(Modifier::ITALIC),
             ),
             Span::raw(""),
@@ -661,11 +695,11 @@ fn draw_table(f: &mut Frame, app: &mut TuiApp, area: Rect) {
                     Span::styled(
                         "[✓]",
                         Style::default()
-                            .fg(Color::Rgb(80, 245, 140))
+                            .fg(Palette::SUCCESS_GREEN)
                             .add_modifier(Modifier::BOLD),
                     )
                 } else {
-                    Span::styled("[ ]", Style::default().fg(Color::Rgb(100, 115, 145)))
+                    Span::styled("[ ]", Style::default().fg(Palette::TEXT_DIM))
                 };
 
                 let path_str = p.root.display().to_string();
@@ -677,19 +711,19 @@ fn draw_table(f: &mut Frame, app: &mut TuiApp, area: Rect) {
 
                 let type_style = match p.project_type {
                     ProjectType::Rust => Style::default()
-                        .fg(Color::Rgb(255, 145, 75))
+                        .fg(Palette::ORANGE)
                         .add_modifier(Modifier::BOLD),
                     ProjectType::Node => Style::default()
-                        .fg(Color::Rgb(95, 230, 110))
+                        .fg(Palette::SUCCESS_GREEN)
                         .add_modifier(Modifier::BOLD),
                     ProjectType::Python => Style::default()
-                        .fg(Color::Rgb(70, 185, 255))
+                        .fg(Palette::CYAN)
                         .add_modifier(Modifier::BOLD),
                     ProjectType::Dotnet => Style::default()
-                        .fg(Color::Rgb(190, 125, 255))
+                        .fg(Palette::PURPLE)
                         .add_modifier(Modifier::BOLD),
                     _ => Style::default()
-                        .fg(Color::Rgb(255, 215, 80))
+                        .fg(Palette::WARNING_YELLOW)
                         .add_modifier(Modifier::BOLD),
                 };
 
@@ -699,7 +733,7 @@ fn draw_table(f: &mut Frame, app: &mut TuiApp, area: Rect) {
                             (
                                 format!("✖ {} (Dirty)", info.status),
                                 Style::default()
-                                    .fg(Color::Rgb(255, 85, 85))
+                                    .fg(Palette::DANGER_RED)
                                     .add_modifier(Modifier::BOLD),
                             )
                         } else {
@@ -707,48 +741,48 @@ fn draw_table(f: &mut Frame, app: &mut TuiApp, area: Rect) {
                                 GitStatus::Stale => (
                                     "● Stale".to_string(),
                                     Style::default()
-                                        .fg(Color::Rgb(75, 235, 130))
+                                        .fg(Palette::SUCCESS_GREEN)
                                         .add_modifier(Modifier::BOLD),
                                 ),
                                 GitStatus::Active => (
                                     "▲ Active".to_string(),
-                                    Style::default().fg(Color::Rgb(255, 205, 60)),
+                                    Style::default().fg(Palette::WARNING_YELLOW),
                                 ),
                                 GitStatus::Moderate => (
                                     "◆ Moderate".to_string(),
-                                    Style::default().fg(Color::Rgb(85, 195, 255)),
+                                    Style::default().fg(Palette::CYAN),
                                 ),
                                 GitStatus::Unknown => (
                                     "? Unknown".to_string(),
-                                    Style::default().fg(Color::Rgb(130, 140, 165)),
+                                    Style::default().fg(Palette::TEXT_DIM),
                                 ),
                             }
                         }
                     }
                     None => (
                         "- No Git".to_string(),
-                        Style::default().fg(Color::Rgb(120, 130, 150)),
+                        Style::default().fg(Palette::TEXT_DIM),
                     ),
                 };
 
                 let reclaimable_bytes = p.total_reclaimable_bytes();
                 let size_style = if reclaimable_bytes >= 1024 * 1024 * 1024 {
                     Style::default()
-                        .fg(Color::Rgb(255, 95, 135))
+                        .fg(Palette::DANGER_RED)
                         .add_modifier(Modifier::BOLD)
                 } else if reclaimable_bytes >= 100 * 1024 * 1024 {
                     Style::default()
-                        .fg(Color::Rgb(255, 210, 65))
+                        .fg(Palette::ORANGE)
                         .add_modifier(Modifier::BOLD)
                 } else if reclaimable_bytes >= 10 * 1024 * 1024 {
-                    Style::default().fg(Color::Rgb(85, 225, 255))
+                    Style::default().fg(Palette::CYAN)
                 } else {
-                    Style::default().fg(Color::Rgb(185, 200, 220))
+                    Style::default().fg(Palette::TEXT_MUTED)
                 };
 
                 Row::new(vec![
                     check_mark,
-                    Span::styled(display_path, Style::default().fg(Color::White)),
+                    Span::styled(display_path, Style::default().fg(Palette::TEXT_MAIN)),
                     Span::styled(p.project_type.to_string(), type_style),
                     Span::styled(status_text, status_style),
                     Span::styled(format_bytes(reclaimable_bytes), size_style),
@@ -761,31 +795,31 @@ fn draw_table(f: &mut Frame, app: &mut TuiApp, area: Rect) {
         Span::styled(
             "SEL",
             Style::default()
-                .fg(Color::Cyan)
+                .fg(Palette::CYAN)
                 .add_modifier(Modifier::BOLD),
         ),
         Span::styled(
             "PROJECT PATH",
             Style::default()
-                .fg(Color::Cyan)
+                .fg(Palette::CYAN)
                 .add_modifier(Modifier::BOLD),
         ),
         Span::styled(
             "TYPE",
             Style::default()
-                .fg(Color::Cyan)
+                .fg(Palette::CYAN)
                 .add_modifier(Modifier::BOLD),
         ),
         Span::styled(
             "GIT STATUS",
             Style::default()
-                .fg(Color::Cyan)
+                .fg(Palette::CYAN)
                 .add_modifier(Modifier::BOLD),
         ),
         Span::styled(
             "RECLAIMABLE",
             Style::default()
-                .fg(Color::Cyan)
+                .fg(Palette::CYAN)
                 .add_modifier(Modifier::BOLD),
         ),
     ])
@@ -817,17 +851,18 @@ fn draw_table(f: &mut Frame, app: &mut TuiApp, area: Rect) {
                 .title(Span::styled(
                     table_title,
                     Style::default()
-                        .fg(Color::Cyan)
+                        .fg(Palette::CYAN)
                         .add_modifier(Modifier::BOLD),
                 ))
                 .borders(Borders::ALL)
                 .border_type(BorderType::Rounded)
-                .border_style(Style::default().fg(Color::Rgb(70, 110, 170))),
+                .border_style(Style::default().fg(Palette::BORDER_PRIMARY)),
         )
         .highlight_style(
             Style::default()
                 .add_modifier(Modifier::BOLD)
-                .fg(Color::White),
+                .fg(Palette::TEXT_MAIN)
+                .bg(Palette::BG_HIGHLIGHT),
         )
         .highlight_symbol("▶ ")
         .highlight_spacing(HighlightSpacing::Always);
@@ -844,32 +879,32 @@ fn draw_inspector(f: &mut Frame, app: &TuiApp, area: Rect) {
             Span::styled(
                 "Project Root: ",
                 Style::default()
-                    .fg(Color::Rgb(140, 185, 255))
+                    .fg(Palette::BLUE)
                     .add_modifier(Modifier::BOLD),
             ),
             Span::styled(
                 p.root.display().to_string(),
                 Style::default()
-                    .fg(Color::White)
+                    .fg(Palette::TEXT_MAIN)
                     .add_modifier(Modifier::BOLD),
             ),
         ]));
 
         let type_style = match p.project_type {
             ProjectType::Rust => Style::default()
-                .fg(Color::Rgb(255, 145, 75))
+                .fg(Palette::ORANGE)
                 .add_modifier(Modifier::BOLD),
             ProjectType::Node => Style::default()
-                .fg(Color::Rgb(95, 230, 110))
+                .fg(Palette::SUCCESS_GREEN)
                 .add_modifier(Modifier::BOLD),
             ProjectType::Python => Style::default()
-                .fg(Color::Rgb(70, 185, 255))
+                .fg(Palette::CYAN)
                 .add_modifier(Modifier::BOLD),
             ProjectType::Dotnet => Style::default()
-                .fg(Color::Rgb(190, 125, 255))
+                .fg(Palette::PURPLE)
                 .add_modifier(Modifier::BOLD),
             _ => Style::default()
-                .fg(Color::Rgb(255, 215, 80))
+                .fg(Palette::WARNING_YELLOW)
                 .add_modifier(Modifier::BOLD),
         };
 
@@ -877,7 +912,7 @@ fn draw_inspector(f: &mut Frame, app: &TuiApp, area: Rect) {
             Span::styled(
                 "Ecosystem:    ",
                 Style::default()
-                    .fg(Color::Rgb(140, 185, 255))
+                    .fg(Palette::BLUE)
                     .add_modifier(Modifier::BOLD),
             ),
             Span::styled(format!("● {}", p.project_type), type_style),
@@ -894,13 +929,13 @@ fn draw_inspector(f: &mut Frame, app: &TuiApp, area: Rect) {
                 Span::styled(
                     "Last Commit:  ",
                     Style::default()
-                        .fg(Color::Rgb(140, 185, 255))
+                        .fg(Palette::BLUE)
                         .add_modifier(Modifier::BOLD),
                 ),
                 Span::styled(
                     commit_age,
                     Style::default()
-                        .fg(Color::Rgb(255, 215, 75))
+                        .fg(Palette::WARNING_YELLOW)
                         .add_modifier(Modifier::BOLD),
                 ),
             ]));
@@ -908,21 +943,21 @@ fn draw_inspector(f: &mut Frame, app: &TuiApp, area: Rect) {
                 Span::styled(
                     "Worktree:     ",
                     Style::default()
-                        .fg(Color::Rgb(140, 185, 255))
+                        .fg(Palette::BLUE)
                         .add_modifier(Modifier::BOLD),
                 ),
                 if git.is_dirty {
                     Span::styled(
                         "✖ Uncommitted changes present (Dirty)",
                         Style::default()
-                            .fg(Color::Rgb(255, 85, 85))
+                            .fg(Palette::DANGER_RED)
                             .add_modifier(Modifier::BOLD),
                     )
                 } else {
                     Span::styled(
                         "✓ Clean",
                         Style::default()
-                            .fg(Color::Rgb(75, 235, 130))
+                            .fg(Palette::SUCCESS_GREEN)
                             .add_modifier(Modifier::BOLD),
                     )
                 },
@@ -932,12 +967,12 @@ fn draw_inspector(f: &mut Frame, app: &TuiApp, area: Rect) {
                 Span::styled(
                     "Git:          ",
                     Style::default()
-                        .fg(Color::Rgb(140, 185, 255))
+                        .fg(Palette::BLUE)
                         .add_modifier(Modifier::BOLD),
                 ),
                 Span::styled(
                     "Not a Git repository",
-                    Style::default().fg(Color::Rgb(150, 160, 180)),
+                    Style::default().fg(Palette::TEXT_MUTED),
                 ),
             ]));
         }
@@ -946,23 +981,23 @@ fn draw_inspector(f: &mut Frame, app: &TuiApp, area: Rect) {
         lines.push(Line::from(Span::styled(
             "Cleanable Artifact Targets:",
             Style::default()
-                .fg(Color::Rgb(255, 205, 60))
+                .fg(Palette::WARNING_YELLOW)
                 .add_modifier(Modifier::BOLD),
         )));
 
         for artifact in &p.artifacts {
             lines.push(Line::from(vec![
-                Span::styled("  ✦ ", Style::default().fg(Color::Rgb(0, 230, 255))),
+                Span::styled("  ✦ ", Style::default().fg(Palette::CYAN)),
                 Span::styled(
                     artifact.target.name,
                     Style::default()
-                        .fg(Color::White)
+                        .fg(Palette::TEXT_MAIN)
                         .add_modifier(Modifier::BOLD),
                 ),
                 Span::styled(
                     format!(" ({})", format_bytes(artifact.size_bytes)),
                     Style::default()
-                        .fg(Color::Rgb(255, 215, 75))
+                        .fg(Palette::WARNING_YELLOW)
                         .add_modifier(Modifier::BOLD),
                 ),
             ]));
@@ -972,7 +1007,7 @@ fn draw_inspector(f: &mut Frame, app: &TuiApp, area: Rect) {
     } else {
         vec![Line::from(Span::styled(
             "No project selected",
-            Style::default().fg(Color::Rgb(130, 140, 160)),
+            Style::default().fg(Palette::TEXT_MUTED),
         ))]
     };
 
@@ -982,12 +1017,12 @@ fn draw_inspector(f: &mut Frame, app: &TuiApp, area: Rect) {
                 .title(Span::styled(
                     " Project Inspector ",
                     Style::default()
-                        .fg(Color::Cyan)
+                        .fg(Palette::CYAN)
                         .add_modifier(Modifier::BOLD),
                 ))
                 .borders(Borders::ALL)
                 .border_type(BorderType::Rounded)
-                .border_style(Style::default().fg(Color::Rgb(70, 110, 170))),
+                .border_style(Style::default().fg(Palette::BORDER_PRIMARY)),
         )
         .wrap(Wrap { trim: true });
 
@@ -1008,12 +1043,12 @@ fn draw_gauge(f: &mut Frame, app: &TuiApp, area: Rect) {
         .title(Span::styled(
             " Selected Reclaimable Space ",
             Style::default()
-                .fg(Color::Cyan)
+                .fg(Palette::CYAN)
                 .add_modifier(Modifier::BOLD),
         ))
         .borders(Borders::ALL)
         .border_type(BorderType::Rounded)
-        .border_style(Style::default().fg(Color::Rgb(70, 110, 170)));
+        .border_style(Style::default().fg(Palette::BORDER_PRIMARY));
 
     let inner_area = block.inner(area);
     f.render_widget(block, area);
@@ -1081,24 +1116,24 @@ fn draw_gauge(f: &mut Frame, app: &TuiApp, area: Rect) {
         Span::styled(
             "Selected: ",
             Style::default()
-                .fg(Color::Rgb(140, 185, 255))
+                .fg(Palette::BLUE)
                 .add_modifier(Modifier::BOLD),
         ),
         Span::styled(
             format_bytes(selected),
             Style::default()
-                .fg(Color::Rgb(80, 245, 140))
+                .fg(Palette::SUCCESS_GREEN)
                 .add_modifier(Modifier::BOLD),
         ),
-        Span::styled(" / ", Style::default().fg(Color::Rgb(120, 130, 150))),
+        Span::styled(" / ", Style::default().fg(Palette::TEXT_DIM)),
         Span::styled(
             format_bytes(total),
-            Style::default().fg(Color::Rgb(200, 215, 235)),
+            Style::default().fg(Palette::TEXT_MUTED),
         ),
         Span::styled(
             format!(" ({:.1}%)", ratio * 100.0),
             Style::default()
-                .fg(Color::Rgb(255, 210, 75))
+                .fg(Palette::WARNING_YELLOW)
                 .add_modifier(Modifier::BOLD),
         ),
     ]));
@@ -1108,18 +1143,18 @@ fn draw_gauge(f: &mut Frame, app: &TuiApp, area: Rect) {
         Span::styled(
             "Targets:  ",
             Style::default()
-                .fg(Color::Rgb(140, 185, 255))
+                .fg(Palette::BLUE)
                 .add_modifier(Modifier::BOLD),
         ),
         Span::styled(
             format!("{} artifact(s)", app.selected_artifacts_count()),
-            Style::default().fg(Color::White),
+            Style::default().fg(Palette::TEXT_MAIN),
         ),
-        Span::styled(" across ", Style::default().fg(Color::Rgb(120, 130, 150))),
+        Span::styled(" across ", Style::default().fg(Palette::TEXT_DIM)),
         Span::styled(
             format!("{} project(s)", app.selected_indices.len()),
             Style::default()
-                .fg(Color::Rgb(85, 215, 255))
+                .fg(Palette::CYAN)
                 .add_modifier(Modifier::BOLD),
         ),
     ]));
@@ -1133,13 +1168,13 @@ fn draw_gauge(f: &mut Frame, app: &TuiApp, area: Rect) {
     let unfilled_str = "░".repeat(unfilled_chars);
 
     let bar_color = if ratio == 0.0 {
-        Color::Rgb(80, 95, 120)
+        Palette::TEXT_DIM
     } else if ratio < 0.35 {
-        Color::Rgb(0, 215, 185)
+        Palette::TEAL
     } else if ratio < 0.75 {
-        Color::Rgb(75, 235, 130)
+        Palette::SUCCESS_GREEN
     } else {
-        Color::Rgb(255, 175, 45)
+        Palette::ORANGE
     };
 
     lines.push(Line::from(vec![
@@ -1147,7 +1182,7 @@ fn draw_gauge(f: &mut Frame, app: &TuiApp, area: Rect) {
             filled_str,
             Style::default().fg(bar_color).add_modifier(Modifier::BOLD),
         ),
-        Span::styled(unfilled_str, Style::default().fg(Color::Rgb(40, 50, 70))),
+        Span::styled(unfilled_str, Style::default().fg(Palette::BG_HIGHLIGHT)),
     ]));
 
     // 4. Ecosystem breakdown lines
@@ -1155,31 +1190,31 @@ fn draw_gauge(f: &mut Frame, app: &TuiApp, area: Rect) {
     lines.push(Line::from(Span::styled(
         "Ecosystem Breakdown:",
         Style::default()
-            .fg(Color::Rgb(255, 205, 60))
+            .fg(Palette::WARNING_YELLOW)
             .add_modifier(Modifier::BOLD),
     )));
 
     if app.selected_indices.is_empty() {
         lines.push(Line::from(Span::styled(
             "  (No projects selected. Press 'Space' or 'a')",
-            Style::default().fg(Color::Rgb(120, 130, 150)),
+            Style::default().fg(Palette::TEXT_MUTED),
         )));
     } else {
         if rust_count > 0 {
             lines.push(Line::from(vec![
                 Span::styled(
                     "  🦀 Rust:    ",
-                    Style::default().fg(Color::Rgb(255, 145, 75)),
+                    Style::default().fg(Palette::ORANGE),
                 ),
                 Span::styled(
                     format_bytes(rust_bytes),
                     Style::default()
-                        .fg(Color::White)
+                        .fg(Palette::TEXT_MAIN)
                         .add_modifier(Modifier::BOLD),
                 ),
                 Span::styled(
                     format!(" ({} project(s))", rust_count),
-                    Style::default().fg(Color::Rgb(130, 140, 160)),
+                    Style::default().fg(Palette::TEXT_MUTED),
                 ),
             ]));
         }
@@ -1187,17 +1222,17 @@ fn draw_gauge(f: &mut Frame, app: &TuiApp, area: Rect) {
             lines.push(Line::from(vec![
                 Span::styled(
                     "  🟢 Node:    ",
-                    Style::default().fg(Color::Rgb(95, 230, 110)),
+                    Style::default().fg(Palette::SUCCESS_GREEN),
                 ),
                 Span::styled(
                     format_bytes(node_bytes),
                     Style::default()
-                        .fg(Color::White)
+                        .fg(Palette::TEXT_MAIN)
                         .add_modifier(Modifier::BOLD),
                 ),
                 Span::styled(
                     format!(" ({} project(s))", node_count),
-                    Style::default().fg(Color::Rgb(130, 140, 160)),
+                    Style::default().fg(Palette::TEXT_MUTED),
                 ),
             ]));
         }
@@ -1205,17 +1240,17 @@ fn draw_gauge(f: &mut Frame, app: &TuiApp, area: Rect) {
             lines.push(Line::from(vec![
                 Span::styled(
                     "  🟣 .NET:    ",
-                    Style::default().fg(Color::Rgb(190, 125, 255)),
+                    Style::default().fg(Palette::PURPLE),
                 ),
                 Span::styled(
                     format_bytes(dotnet_bytes),
                     Style::default()
-                        .fg(Color::White)
+                        .fg(Palette::TEXT_MAIN)
                         .add_modifier(Modifier::BOLD),
                 ),
                 Span::styled(
                     format!(" ({} project(s))", dotnet_count),
-                    Style::default().fg(Color::Rgb(130, 140, 160)),
+                    Style::default().fg(Palette::TEXT_MUTED),
                 ),
             ]));
         }
@@ -1223,17 +1258,17 @@ fn draw_gauge(f: &mut Frame, app: &TuiApp, area: Rect) {
             lines.push(Line::from(vec![
                 Span::styled(
                     "  🐍 Python:  ",
-                    Style::default().fg(Color::Rgb(70, 185, 255)),
+                    Style::default().fg(Palette::CYAN),
                 ),
                 Span::styled(
                     format_bytes(python_bytes),
                     Style::default()
-                        .fg(Color::White)
+                        .fg(Palette::TEXT_MAIN)
                         .add_modifier(Modifier::BOLD),
                 ),
                 Span::styled(
                     format!(" ({} project(s))", python_count),
-                    Style::default().fg(Color::Rgb(130, 140, 160)),
+                    Style::default().fg(Palette::TEXT_MUTED),
                 ),
             ]));
         }
@@ -1241,38 +1276,38 @@ fn draw_gauge(f: &mut Frame, app: &TuiApp, area: Rect) {
             lines.push(Line::from(vec![
                 Span::styled(
                     "  📦 Other:   ",
-                    Style::default().fg(Color::Rgb(255, 215, 80)),
+                    Style::default().fg(Palette::WARNING_YELLOW),
                 ),
                 Span::styled(
                     format_bytes(other_bytes),
                     Style::default()
-                        .fg(Color::White)
+                        .fg(Palette::TEXT_MAIN)
                         .add_modifier(Modifier::BOLD),
                 ),
                 Span::styled(
                     format!(" ({} project(s))", other_count),
-                    Style::default().fg(Color::Rgb(130, 140, 160)),
+                    Style::default().fg(Palette::TEXT_MUTED),
                 ),
             ]));
         }
 
         // Safety summary
         lines.push(Line::from(vec![
-            Span::styled("  Safety:     ", Style::default().fg(Color::Cyan)),
+            Span::styled("  Safety:     ", Style::default().fg(Palette::CYAN)),
             Span::styled(
                 format!("● Stale: {}", format_bytes(stale_bytes)),
                 Style::default()
-                    .fg(Color::Rgb(75, 235, 130))
+                    .fg(Palette::SUCCESS_GREEN)
                     .add_modifier(Modifier::BOLD),
             ),
             Span::styled(
                 format!("  ▲ Active: {}", format_bytes(active_bytes)),
                 if active_bytes > 0 {
                     Style::default()
-                        .fg(Color::Rgb(255, 205, 60))
+                        .fg(Palette::WARNING_YELLOW)
                         .add_modifier(Modifier::BOLD)
                 } else {
-                    Style::default().fg(Color::Rgb(120, 130, 150))
+                    Style::default().fg(Palette::TEXT_MUTED)
                 },
             ),
         ]));
@@ -1287,19 +1322,19 @@ fn draw_footer(f: &mut Frame, app: &TuiApp, area: Rect) {
         if let Some((ref msg, style)) = app.notification_message {
             (
                 Line::from(vec![Span::styled(msg.clone(), style)]),
-                Style::default().fg(Color::Yellow),
+                Style::default().fg(Palette::WARNING_YELLOW),
             )
         } else if app.is_filtering {
             let prompt = if app.filter_query.is_empty() {
                 Span::styled(
                     "Type to filter by name, path, ecosystem, or git status... ",
-                    Style::default().fg(Color::Rgb(130, 140, 160)),
+                    Style::default().fg(Palette::TEXT_MUTED),
                 )
             } else {
                 Span::styled(
                     format!("{} ", app.filter_query),
                     Style::default()
-                        .fg(Color::White)
+                        .fg(Palette::TEXT_MAIN)
                         .add_modifier(Modifier::BOLD),
                 )
             };
@@ -1309,8 +1344,8 @@ fn draw_footer(f: &mut Frame, app: &TuiApp, area: Rect) {
                     Span::styled(
                         "  Filter: ",
                         Style::default()
-                            .fg(Color::Black)
-                            .bg(Color::Rgb(255, 205, 50))
+                            .fg(Palette::TEXT_DARK)
+                            .bg(Palette::WARNING_YELLOW)
                             .add_modifier(Modifier::BOLD),
                     ),
                     Span::raw(" "),
@@ -1318,7 +1353,7 @@ fn draw_footer(f: &mut Frame, app: &TuiApp, area: Rect) {
                     Span::styled(
                         "█",
                         Style::default()
-                            .fg(Color::Rgb(255, 205, 50))
+                            .fg(Palette::WARNING_YELLOW)
                             .add_modifier(Modifier::RAPID_BLINK),
                     ),
                     Span::raw("   "),
@@ -1328,168 +1363,168 @@ fn draw_footer(f: &mut Frame, app: &TuiApp, area: Rect) {
                             app.filtered_indices.len(),
                             app.projects.len()
                         ),
-                        Style::default().fg(Color::Rgb(85, 215, 255)),
+                        Style::default().fg(Palette::CYAN),
                     ),
-                    Span::styled(" │ ", Style::default().fg(Color::Rgb(65, 80, 115))),
+                    Span::styled(" │ ", Style::default().fg(Palette::TEXT_DIM)),
                     Span::styled(
                         " [Enter] Done ",
                         Style::default()
-                            .fg(Color::Black)
-                            .bg(Color::Rgb(50, 220, 110))
+                            .fg(Palette::TEXT_DARK)
+                            .bg(Palette::SUCCESS_GREEN)
                             .add_modifier(Modifier::BOLD),
                     ),
                     Span::raw(" "),
                     Span::styled(
                         " [Esc] Cancel ",
                         Style::default()
-                            .fg(Color::White)
-                            .bg(Color::Rgb(215, 50, 75))
+                            .fg(Palette::TEXT_MAIN)
+                            .bg(Palette::DANGER_RED)
                             .add_modifier(Modifier::BOLD),
                     ),
                 ]),
-                Style::default().fg(Color::Rgb(255, 205, 50)),
+                Style::default().fg(Palette::WARNING_YELLOW),
             )
         } else {
             let mut spans = vec![
                 Span::styled(
                     " ↑/k ",
                     Style::default()
-                        .fg(Color::White)
-                        .bg(Color::Rgb(45, 75, 150))
+                        .fg(Palette::TEXT_MAIN)
+                        .bg(Color::Rgb(55, 75, 120))
                         .add_modifier(Modifier::BOLD),
                 ),
                 Span::styled(
                     " Up ",
                     Style::default()
-                        .fg(Color::Rgb(180, 215, 255))
+                        .fg(Palette::TEXT_MUTED)
                         .add_modifier(Modifier::BOLD),
                 ),
                 Span::styled(
                     " ↓/j ",
                     Style::default()
-                        .fg(Color::White)
-                        .bg(Color::Rgb(45, 75, 150))
+                        .fg(Palette::TEXT_MAIN)
+                        .bg(Color::Rgb(55, 75, 120))
                         .add_modifier(Modifier::BOLD),
                 ),
                 Span::styled(
                     " Down ",
                     Style::default()
-                        .fg(Color::Rgb(180, 215, 255))
+                        .fg(Palette::TEXT_MUTED)
                         .add_modifier(Modifier::BOLD),
                 ),
-                Span::styled(" │ ", Style::default().fg(Color::Rgb(65, 80, 115))),
+                Span::styled(" │ ", Style::default().fg(Palette::TEXT_DIM)),
                 Span::styled(
                     " Space ",
                     Style::default()
-                        .fg(Color::Black)
-                        .bg(Color::Rgb(245, 175, 45))
+                        .fg(Palette::TEXT_DARK)
+                        .bg(Palette::ORANGE)
                         .add_modifier(Modifier::BOLD),
                 ),
                 Span::styled(
                     " Toggle ",
                     Style::default()
-                        .fg(Color::Rgb(255, 225, 130))
+                        .fg(Palette::WARNING_YELLOW)
                         .add_modifier(Modifier::BOLD),
                 ),
-                Span::styled(" │ ", Style::default().fg(Color::Rgb(65, 80, 115))),
+                Span::styled(" │ ", Style::default().fg(Palette::TEXT_DIM)),
                 Span::styled(
                     " a ",
                     Style::default()
-                        .fg(Color::Black)
-                        .bg(Color::Rgb(30, 190, 165))
+                        .fg(Palette::TEXT_DARK)
+                        .bg(Palette::TEAL)
                         .add_modifier(Modifier::BOLD),
                 ),
                 Span::styled(
                     " Select All ",
                     Style::default()
-                        .fg(Color::Rgb(120, 250, 230))
+                        .fg(Palette::TEAL)
                         .add_modifier(Modifier::BOLD),
                 ),
-                Span::styled(" │ ", Style::default().fg(Color::Rgb(65, 80, 115))),
+                Span::styled(" │ ", Style::default().fg(Palette::TEXT_DIM)),
                 Span::styled(
                     " u ",
                     Style::default()
-                        .fg(Color::White)
-                        .bg(Color::Rgb(110, 80, 160))
+                        .fg(Palette::TEXT_MAIN)
+                        .bg(Palette::PURPLE)
                         .add_modifier(Modifier::BOLD),
                 ),
                 Span::styled(
                     " Unselect All ",
                     Style::default()
-                        .fg(Color::Rgb(215, 195, 250))
+                        .fg(Palette::PINK)
                         .add_modifier(Modifier::BOLD),
                 ),
-                Span::styled(" │ ", Style::default().fg(Color::Rgb(65, 80, 115))),
+                Span::styled(" │ ", Style::default().fg(Palette::TEXT_DIM)),
             ];
 
             if !app.filter_query.is_empty() {
                 spans.push(Span::styled(
                     " c ",
                     Style::default()
-                        .fg(Color::Black)
-                        .bg(Color::Rgb(255, 205, 50))
+                        .fg(Palette::TEXT_DARK)
+                        .bg(Palette::WARNING_YELLOW)
                         .add_modifier(Modifier::BOLD),
                 ));
                 spans.push(Span::styled(
                     " Clear Filter ",
                     Style::default()
-                        .fg(Color::Rgb(255, 225, 130))
+                        .fg(Palette::WARNING_YELLOW)
                         .add_modifier(Modifier::BOLD),
                 ));
             } else {
                 spans.push(Span::styled(
                     " / ",
                     Style::default()
-                        .fg(Color::Black)
-                        .bg(Color::Rgb(55, 175, 240))
+                        .fg(Palette::TEXT_DARK)
+                        .bg(Palette::CYAN)
                         .add_modifier(Modifier::BOLD),
                 ));
                 spans.push(Span::styled(
                     " Filter ",
                     Style::default()
-                        .fg(Color::Rgb(160, 225, 255))
+                        .fg(Palette::CYAN)
                         .add_modifier(Modifier::BOLD),
                 ));
             }
 
             spans.push(Span::styled(
                 " │ ",
-                Style::default().fg(Color::Rgb(65, 80, 115)),
+                Style::default().fg(Palette::TEXT_DIM),
             ));
             spans.push(Span::styled(
                 " d ",
                 Style::default()
-                    .fg(Color::White)
-                    .bg(Color::Rgb(220, 45, 75))
+                    .fg(Palette::TEXT_MAIN)
+                    .bg(Palette::DANGER_RED)
                     .add_modifier(Modifier::BOLD),
             ));
             spans.push(Span::styled(
                 " Clean Selected ",
                 Style::default()
-                    .fg(Color::Rgb(255, 130, 155))
+                    .fg(Palette::PINK)
                     .add_modifier(Modifier::BOLD),
             ));
             spans.push(Span::styled(
                 " │ ",
-                Style::default().fg(Color::Rgb(65, 80, 115)),
+                Style::default().fg(Palette::TEXT_DIM),
             ));
             spans.push(Span::styled(
                 " q/Esc ",
                 Style::default()
-                    .fg(Color::White)
-                    .bg(Color::Rgb(135, 65, 185))
+                    .fg(Palette::TEXT_MAIN)
+                    .bg(Palette::PURPLE)
                     .add_modifier(Modifier::BOLD),
             ));
             spans.push(Span::styled(
                 " Exit ",
                 Style::default()
-                    .fg(Color::Rgb(225, 185, 255))
+                    .fg(Palette::PINK)
                     .add_modifier(Modifier::BOLD),
             ));
 
             (
                 Line::from(spans),
-                Style::default().fg(Color::Rgb(85, 115, 165)),
+                Style::default().fg(Palette::BORDER_PRIMARY),
             )
         };
 
@@ -1522,53 +1557,53 @@ fn draw_confirm_dialog(f: &mut Frame, app: &TuiApp, area: Rect) {
         Line::from(vec![Span::styled(
             "  Ready to clean selected build artifacts?",
             Style::default()
-                .fg(Color::White)
+                .fg(Palette::TEXT_MAIN)
                 .add_modifier(Modifier::BOLD),
         )]),
         Line::raw(""),
         Line::from(vec![
             Span::styled(
                 "  Targets:    ",
-                Style::default().fg(Color::Rgb(140, 160, 190)),
+                Style::default().fg(Palette::TEXT_MUTED),
             ),
             Span::styled(
                 format!("{} artifact(s)", app.selected_artifacts_count()),
                 Style::default()
-                    .fg(Color::Rgb(255, 205, 75))
+                    .fg(Palette::WARNING_YELLOW)
                     .add_modifier(Modifier::BOLD),
             ),
-            Span::styled(" across ", Style::default().fg(Color::Rgb(140, 160, 190))),
+            Span::styled(" across ", Style::default().fg(Palette::TEXT_MUTED)),
             Span::styled(
                 format!("{} project(s)", app.selected_indices.len()),
                 Style::default()
-                    .fg(Color::Rgb(85, 215, 255))
+                    .fg(Palette::CYAN)
                     .add_modifier(Modifier::BOLD),
             ),
         ]),
         Line::from(vec![
             Span::styled(
                 "  Reclaim:    ",
-                Style::default().fg(Color::Rgb(140, 160, 190)),
+                Style::default().fg(Palette::TEXT_MUTED),
             ),
             Span::styled(
                 format_bytes(app.selected_reclaimable_bytes()),
                 Style::default()
-                    .fg(Color::Rgb(80, 245, 140))
+                    .fg(Palette::SUCCESS_GREEN)
                     .add_modifier(Modifier::BOLD),
             ),
             Span::styled(
                 " of disk space",
-                Style::default().fg(Color::Rgb(140, 160, 190)),
+                Style::default().fg(Palette::TEXT_MUTED),
             ),
         ]),
         Line::from(vec![
             Span::styled(
                 "  Safety:     ",
-                Style::default().fg(Color::Rgb(140, 160, 190)),
+                Style::default().fg(Palette::TEXT_MUTED),
             ),
             Span::styled(
                 "Atomic rename to .sweep-trash (safe rollback)",
-                Style::default().fg(Color::Rgb(100, 200, 225)),
+                Style::default().fg(Palette::CYAN),
             ),
         ]),
         Line::raw(""),
@@ -1577,16 +1612,16 @@ fn draw_confirm_dialog(f: &mut Frame, app: &TuiApp, area: Rect) {
             Span::styled(
                 " [y / Enter] Confirm Clean ",
                 Style::default()
-                    .fg(Color::Black)
-                    .bg(Color::Rgb(50, 220, 110))
+                    .fg(Palette::TEXT_DARK)
+                    .bg(Palette::SUCCESS_GREEN)
                     .add_modifier(Modifier::BOLD),
             ),
             Span::raw("    "),
             Span::styled(
                 " [n / Esc] Cancel ",
                 Style::default()
-                    .fg(Color::White)
-                    .bg(Color::Rgb(215, 50, 75))
+                    .fg(Palette::TEXT_MAIN)
+                    .bg(Palette::DANGER_RED)
                     .add_modifier(Modifier::BOLD),
             ),
         ]),
@@ -1597,12 +1632,12 @@ fn draw_confirm_dialog(f: &mut Frame, app: &TuiApp, area: Rect) {
             .title(Span::styled(
                 " 󰈸 Confirm Cleanup ",
                 Style::default()
-                    .fg(Color::Rgb(255, 95, 115))
+                    .fg(Palette::DANGER_RED)
                     .add_modifier(Modifier::BOLD),
             ))
             .borders(Borders::ALL)
             .border_type(BorderType::Rounded)
-            .border_style(Style::default().fg(Color::Rgb(255, 95, 115))),
+            .border_style(Style::default().fg(Palette::BORDER_ALERT)),
     );
 
     f.render_widget(popup, popup_area);
