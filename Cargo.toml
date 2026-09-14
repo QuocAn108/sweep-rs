@@ -3,6 +3,13 @@ name = "sweep-rs"
 version = "0.1.0"
 edition = "2024"
 description = "A fast, git-aware workspace cleanup tool written in Rust."
+license = "MIT"
+repository = "https://github.com/QuocAn108/sweep-rs"
+homepage = "https://github.com/QuocAn108/sweep-rs"
+readme = "README.md"
+keywords = ["cli", "cleanup", "git", "workspace", "tui"]
+categories = ["command-line-utilities", "development-tools", "filesystem"]
+authors = ["QuocAn108"]
 
 [dependencies]
 # CLI Parsing
