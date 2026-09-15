@@ -14,6 +14,7 @@ pub const PRUNE_DIRS: &[&str] = &[
     ".git",
     "node_modules",
     "target",
+    "build",
     "bin",
     "obj",
     ".venv",
@@ -23,6 +24,8 @@ pub const PRUNE_DIRS: &[&str] = &[
     ".idea",
     ".vscode",
     ".sweep-trash",
+    ".gradle",
+    "out",
 ];
 
 #[derive(Debug, Clone)]
@@ -75,7 +78,6 @@ impl ScanEngine {
                 }
             });
 
-        // Phase 1: Rapid Traversal & Project Candidate Identification
         let mut candidates = Vec::new();
 
         for entry_res in walker {
@@ -103,7 +105,6 @@ impl ScanEngine {
             }
         }
 
-        // Phase 2: Parallel Artifact Sizing & Cached Git Introspection via Rayon
         let git_cache = Mutex::new(HashMap::new());
         let stale_days_filter = self.stale_days_filter;
 
@@ -190,12 +191,18 @@ mod tests {
         std::fs::write(node_modules.join("index.js"), vec![0u8; 2048]).unwrap();
         std::fs::write(node_modules.join("package.json"), "{\"name\": \"nested\"}").unwrap();
 
+        let java_dir = root.path().join("my-java-app");
+        std::fs::create_dir_all(&java_dir).unwrap();
+        std::fs::write(java_dir.join("pom.xml"), "<project></project>").unwrap();
+        std::fs::create_dir_all(java_dir.join("target")).unwrap();
+        std::fs::write(java_dir.join("target").join("output.jar"), vec![0u8; 512]).unwrap();
+
         let registry = DetectorRegistry::default_all();
         let engine = ScanEngine::new(registry);
 
         let (projects, stats) = engine.scan::<fn(usize)>(root.path(), None);
 
-        assert_eq!(projects.len(), 2);
+        assert_eq!(projects.len(), 3);
         assert!(stats.dirs_inspected >= 2);
 
         let rust_proj = projects
@@ -213,5 +220,13 @@ mod tests {
         assert_eq!(node_proj.artifacts.len(), 1);
         assert_eq!(node_proj.artifacts[0].target.name, "node_modules");
         assert_eq!(node_proj.artifacts[0].size_bytes, 4096 * 2);
+
+        let java_proj = projects
+            .iter()
+            .find(|p| p.project_type == ProjectType::Java)
+            .unwrap();
+        assert_eq!(java_proj.artifacts.len(), 1);
+        assert_eq!(java_proj.artifacts[0].target.name, "target");
+        assert_eq!(java_proj.artifacts[0].size_bytes, 4096);
     }
 }

@@ -1,9 +1,11 @@
 pub mod dotnet;
+pub mod java;
 pub mod node;
 pub mod python;
 pub mod rust;
 
 use self::dotnet::DotnetDetector;
+use self::java::JavaDetector;
 use self::node::NodeDetector;
 use self::python::PythonDetector;
 use self::rust::RustDetector;
@@ -32,6 +34,7 @@ impl DetectorRegistry {
             .register(Box::new(NodeDetector::new()))
             .register(Box::new(PythonDetector::new()))
             .register(Box::new(DotnetDetector::new()))
+            .register(Box::new(JavaDetector::new()))
     }
 
     pub fn for_type(filter: &str) -> Result<Self, String> {
@@ -45,8 +48,9 @@ impl DetectorRegistry {
             "dotnet" | ".net" | "csharp" | "cs" => {
                 Ok(Self::new().register(Box::new(DotnetDetector::new())))
             }
+            "java" | "jvm" => Ok(Self::new().register(Box::new(JavaDetector::new()))),
             other => Err(format!(
-                "Unknown project type '{}'. Available types: all, rust, node, python, dotnet",
+                "Unknown project type '{}'. Available types: all, rust, node, python, dotnet, java",
                 other
             )),
         }

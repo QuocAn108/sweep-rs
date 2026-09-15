@@ -11,6 +11,9 @@ pub const WHITELIST_ARTIFACT_NAMES: &[&str] = &[
     "venv",
     "__pycache__",
     ".cache",
+    "build",
+    ".gradle",
+    "out",
 ];
 
 #[allow(dead_code)]

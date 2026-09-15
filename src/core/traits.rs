@@ -7,6 +7,7 @@ pub enum ProjectType {
     Node,
     Dotnet,
     Python,
+    Java,
     Custom(String),
 }
 
@@ -17,6 +18,7 @@ impl std::fmt::Display for ProjectType {
             ProjectType::Node => write!(f, "Node"),
             ProjectType::Dotnet => write!(f, ".NET"),
             ProjectType::Python => write!(f, "Python"),
+            ProjectType::Java => write!(f, "Java"),
             ProjectType::Custom(s) => write!(f, "{}", s),
         }
     }

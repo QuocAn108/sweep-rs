@@ -722,6 +722,9 @@ fn draw_table(f: &mut Frame, app: &mut TuiApp, area: Rect) {
                     ProjectType::Dotnet => Style::default()
                         .fg(Palette::PURPLE)
                         .add_modifier(Modifier::BOLD),
+                    ProjectType::Java => Style::default()
+                        .fg(Palette::WARNING_YELLOW)
+                        .add_modifier(Modifier::BOLD),
                     _ => Style::default()
                         .fg(Palette::WARNING_YELLOW)
                         .add_modifier(Modifier::BOLD),
@@ -902,6 +905,9 @@ fn draw_inspector(f: &mut Frame, app: &TuiApp, area: Rect) {
             ProjectType::Dotnet => Style::default()
                 .fg(Palette::PURPLE)
                 .add_modifier(Modifier::BOLD),
+            ProjectType::Java => Style::default()
+                .fg(Palette::WARNING_YELLOW)
+                .add_modifier(Modifier::BOLD),
             _ => Style::default()
                 .fg(Palette::WARNING_YELLOW)
                 .add_modifier(Modifier::BOLD),
@@ -1065,6 +1071,8 @@ fn draw_gauge(f: &mut Frame, app: &TuiApp, area: Rect) {
     let mut dotnet_count = 0usize;
     let mut python_bytes = 0u64;
     let mut python_count = 0usize;
+    let mut java_bytes = 0u64;
+    let mut java_count = 0usize;
     let mut other_bytes = 0u64;
     let mut other_count = 0usize;
 
@@ -1090,6 +1098,10 @@ fn draw_gauge(f: &mut Frame, app: &TuiApp, area: Rect) {
                 ProjectType::Python => {
                     python_bytes += p_bytes;
                     python_count += 1;
+                }
+                ProjectType::Java => {
+                    java_bytes += p_bytes;
+                    java_count += 1;
                 }
                 _ => {
                     other_bytes += p_bytes;
@@ -1258,6 +1270,24 @@ fn draw_gauge(f: &mut Frame, app: &TuiApp, area: Rect) {
                 ),
                 Span::styled(
                     format!(" ({} project(s))", python_count),
+                    Style::default().fg(Palette::TEXT_MUTED),
+                ),
+            ]));
+        }
+        if java_count > 0 {
+            lines.push(Line::from(vec![
+                Span::styled(
+                    "  ☕ Java:    ",
+                    Style::default().fg(Palette::WARNING_YELLOW),
+                ),
+                Span::styled(
+                    format_bytes(java_bytes),
+                    Style::default()
+                        .fg(Palette::TEXT_MAIN)
+                        .add_modifier(Modifier::BOLD),
+                ),
+                Span::styled(
+                    format!(" ({} project(s))", java_count),
                     Style::default().fg(Palette::TEXT_MUTED),
                 ),
             ]));
