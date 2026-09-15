@@ -16,7 +16,26 @@
 [![Rust Edition](https://img.shields.io/badge/Rust-2024%20Edition-orange.svg)](https://www.rust-lang.org)
 [![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20Linux%20%7C%20macOS-blue.svg)](https://github.com/QuocAn108/sweep-rs)
 
-> A blazing fast, Git-aware workspace cleanup tool written in Rust. Reclaim gigabytes of disk space from build artifacts (`target`, `node_modules`, `bin/obj`, `.venv`) with zero risk.
+> A blazing fast, Git-aware workspace cleanup tool written in Rust. Reclaim gigabytes of disk space from build artifacts across 12+ development ecosystems with zero risk.
+
+---
+
+## 🧰 Supported Ecosystems & Targets
+
+| Ecosystem | Trigger File(s) | Reclaimable Target Directory(ies) |
+| :--- | :--- | :--- |
+| 🦀 **Rust** | `Cargo.toml` | `target/` |
+| 🟢 **Node.js** | `package.json` | `node_modules/`, `.next/`, `dist/`, `build/` |
+| 🐍 **Python** | `pyproject.toml`, `requirements.txt`, `Pipfile` | `.venv/`, `venv/`, `__pycache__/` |
+| 🟣 **.NET** | `*.csproj`, `*.fsproj`, `*.sln` | `bin/`, `obj/` |
+| ☕ **Java** | `pom.xml`, `build.gradle`, `build.gradle.kts` | `target/`, `build/`, `.gradle/` |
+| 🐹 **Go** | `go.mod` | `bin/` |
+| ⚙️ **C / C++** | `CMakeLists.txt` | `build/`, `cmake-build-debug/` |
+| 🐘 **PHP** | `composer.json` | `vendor/` |
+| 💎 **Ruby** | `Gemfile` | `vendor/bundle/` |
+| 🧪 **Elixir** | `mix.exs` | `_build/`, `deps/` |
+| 💙 **Flutter / Dart** | `pubspec.yaml` | `.dart_tool/`, `build/` |
+| 🍊 **Swift** | `Package.swift` | `.build/` |
 
 ---
 
@@ -39,7 +58,7 @@
 
 | Feature | `sweep-rs` | `cargo-sweep` | `kondo` | `npkill` |
 | :--- | :---: | :---: | :---: | :---: |
-| **Language Ecosystems** | **Rust, Node, Python, .NET** | Rust only | 20+ Ecosystems | Node only |
+| **Language Ecosystems** | **12+ Ecosystems** | Rust only | 20+ Ecosystems | Node only |
 | **Git Awareness (Commit Age & Dirty State)** | ✅ **Native (`libgit2`)** | ⚠️ Limited | ❌ No | ❌ No |
 | **Traversal Speed** | 🚀 **Parallel (`jwalk`)** | Standard | Standard | Node.js Single-thread |
 | **Deletion Safety** | ⚡ **$O(1)$ Atomic Trash** | Direct deletion | Direct deletion | Direct deletion |
@@ -109,10 +128,11 @@ sweep-rs --stale 30
 ```
 
 ### 5. Filter by Ecosystem
-Limit scanning to specific language project types (`rust`, `node`, `python`, `dotnet`):
+Limit scanning to specific language project types (`rust`, `node`, `python`, `dotnet`, `java`, `go`, `cpp`, `php`, `ruby`, `elixir`, `flutter`, `swift`):
 ```bash
 sweep-rs --type rust
 sweep-rs --type node
+sweep-rs --type java
 ```
 
 ### 6. Non-Interactive / CI/CD Mode
@@ -130,7 +150,7 @@ sweep-rs --path /ci/workspace --force
 | `-p, --path <PATH>` | `PathBuf` | `.` | Root directory to begin recursive scanning |
 | `-d, --dry-run` | `bool` | `false` | Run full scan pipeline and report sizes without deleting files |
 | `-s, --stale [<DAYS>]`| `u64` | `30` | Filter and display projects with no commits in the last $N$ days |
-| `-t, --type <TYPE>` | `String` | `all` | Limit scan to project type (`all`, `rust`, `node`, `python`, `dotnet`) |
+| `-t, --type <TYPE>` | `String` | `all` | Limit scan to project type (`all`, `rust`, `node`, `python`, `dotnet`, `java`, `go`, `cpp`, `php`, `ruby`, `elixir`, `flutter`, `swift`) |
 | `-f, --force` | `bool` | `false` | Bypass confirmation prompts and clean immediately |
 | `--tui` | `bool` | `false` | Launch fullscreen interactive Terminal User Interface (TUI) |
 | `-v, --verbose` | `bool` | `false` | Display detailed inspection logs and errors |
