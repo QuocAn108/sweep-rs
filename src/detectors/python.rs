@@ -39,6 +39,59 @@ impl ProjectDetector for PythonDetector {
                 rel_path: PathBuf::from("__pycache__"),
                 is_reconstructible: true,
             },
+            ArtifactTarget {
+                name: ".pytest_cache",
+                rel_path: PathBuf::from(".pytest_cache"),
+                is_reconstructible: true,
+            },
+            ArtifactTarget {
+                name: ".mypy_cache",
+                rel_path: PathBuf::from(".mypy_cache"),
+                is_reconstructible: true,
+            },
+            ArtifactTarget {
+                name: ".ruff_cache",
+                rel_path: PathBuf::from(".ruff_cache"),
+                is_reconstructible: true,
+            },
+            ArtifactTarget {
+                name: "dist",
+                rel_path: PathBuf::from("dist"),
+                is_reconstructible: true,
+            },
+            ArtifactTarget {
+                name: "build",
+                rel_path: PathBuf::from("build"),
+                is_reconstructible: true,
+            },
         ]
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tempfile::tempdir;
+
+    #[test]
+    fn test_detect_python_project() {
+        let temp = tempdir().unwrap();
+        let pyproject = temp.path().join("pyproject.toml");
+        std::fs::write(&pyproject, "[project]\nname = \"test\"").unwrap();
+
+        let detector = PythonDetector::new();
+        assert!(detector.detect(temp.path()));
+        assert_eq!(detector.name(), ProjectType::Python);
+
+        let artifacts = detector.get_artifacts(temp.path());
+        assert_eq!(artifacts.len(), 8);
+        assert_eq!(artifacts[0].name, ".venv");
+    }
+
+    #[test]
+    fn test_detect_non_python_project() {
+        let temp = tempdir().unwrap();
+        let detector = PythonDetector::new();
+        assert!(!detector.detect(temp.path()));
     }
 }

@@ -58,6 +58,50 @@ impl Palette {
     pub const BG_DARK: Color = Color::Rgb(17, 17, 27); // Dark badge background
 }
 
+pub fn project_type_style(pt: &ProjectType) -> Style {
+    match pt {
+        ProjectType::Rust => Style::default()
+            .fg(Palette::ORANGE)
+            .add_modifier(Modifier::BOLD),
+        ProjectType::Node => Style::default()
+            .fg(Palette::SUCCESS_GREEN)
+            .add_modifier(Modifier::BOLD),
+        ProjectType::Python => Style::default()
+            .fg(Palette::CYAN)
+            .add_modifier(Modifier::BOLD),
+        ProjectType::Dotnet => Style::default()
+            .fg(Palette::PURPLE)
+            .add_modifier(Modifier::BOLD),
+        ProjectType::Java => Style::default()
+            .fg(Palette::WARNING_YELLOW)
+            .add_modifier(Modifier::BOLD),
+        ProjectType::Go => Style::default()
+            .fg(Palette::TEAL)
+            .add_modifier(Modifier::BOLD),
+        ProjectType::Php => Style::default()
+            .fg(Color::Rgb(130, 140, 255))
+            .add_modifier(Modifier::BOLD),
+        ProjectType::Ruby => Style::default()
+            .fg(Palette::DANGER_RED)
+            .add_modifier(Modifier::BOLD),
+        ProjectType::Cpp => Style::default()
+            .fg(Palette::BLUE)
+            .add_modifier(Modifier::BOLD),
+        ProjectType::Flutter => Style::default()
+            .fg(Color::Rgb(65, 195, 255))
+            .add_modifier(Modifier::BOLD),
+        ProjectType::Swift => Style::default()
+            .fg(Color::Rgb(255, 115, 75))
+            .add_modifier(Modifier::BOLD),
+        ProjectType::Elixir => Style::default()
+            .fg(Color::Rgb(215, 110, 255))
+            .add_modifier(Modifier::BOLD),
+        ProjectType::Custom(_) => Style::default()
+            .fg(Palette::WARNING_YELLOW)
+            .add_modifier(Modifier::BOLD),
+    }
+}
+
 // =========================================================================
 // 1. Inquire Selection Prompt (Lightweight CLI Checkbox Mode)
 // =========================================================================
@@ -709,26 +753,7 @@ fn draw_table(f: &mut Frame, app: &mut TuiApp, area: Rect) {
                     path_str
                 };
 
-                let type_style = match p.project_type {
-                    ProjectType::Rust => Style::default()
-                        .fg(Palette::ORANGE)
-                        .add_modifier(Modifier::BOLD),
-                    ProjectType::Node => Style::default()
-                        .fg(Palette::SUCCESS_GREEN)
-                        .add_modifier(Modifier::BOLD),
-                    ProjectType::Python => Style::default()
-                        .fg(Palette::CYAN)
-                        .add_modifier(Modifier::BOLD),
-                    ProjectType::Dotnet => Style::default()
-                        .fg(Palette::PURPLE)
-                        .add_modifier(Modifier::BOLD),
-                    ProjectType::Java => Style::default()
-                        .fg(Palette::WARNING_YELLOW)
-                        .add_modifier(Modifier::BOLD),
-                    _ => Style::default()
-                        .fg(Palette::WARNING_YELLOW)
-                        .add_modifier(Modifier::BOLD),
-                };
+                let type_style = project_type_style(&p.project_type);
 
                 let (status_text, status_style) = match &p.git_info {
                     Some(info) => {
@@ -892,26 +917,7 @@ fn draw_inspector(f: &mut Frame, app: &TuiApp, area: Rect) {
             ),
         ]));
 
-        let type_style = match p.project_type {
-            ProjectType::Rust => Style::default()
-                .fg(Palette::ORANGE)
-                .add_modifier(Modifier::BOLD),
-            ProjectType::Node => Style::default()
-                .fg(Palette::SUCCESS_GREEN)
-                .add_modifier(Modifier::BOLD),
-            ProjectType::Python => Style::default()
-                .fg(Palette::CYAN)
-                .add_modifier(Modifier::BOLD),
-            ProjectType::Dotnet => Style::default()
-                .fg(Palette::PURPLE)
-                .add_modifier(Modifier::BOLD),
-            ProjectType::Java => Style::default()
-                .fg(Palette::WARNING_YELLOW)
-                .add_modifier(Modifier::BOLD),
-            _ => Style::default()
-                .fg(Palette::WARNING_YELLOW)
-                .add_modifier(Modifier::BOLD),
-        };
+        let type_style = project_type_style(&p.project_type);
 
         lines.push(Line::from(vec![
             Span::styled(
@@ -920,7 +926,7 @@ fn draw_inspector(f: &mut Frame, app: &TuiApp, area: Rect) {
                     .fg(Palette::BLUE)
                     .add_modifier(Modifier::BOLD),
             ),
-            Span::styled(format!("● {}", p.project_type), type_style),
+            Span::styled(p.project_type.to_string(), type_style),
         ]));
 
         if let Some(ref git) = p.git_info {
@@ -1063,51 +1069,18 @@ fn draw_gauge(f: &mut Frame, app: &TuiApp, area: Rect) {
     }
 
     // Calculate ecosystem breakdown of selected items
-    let mut rust_bytes = 0u64;
-    let mut rust_count = 0usize;
-    let mut node_bytes = 0u64;
-    let mut node_count = 0usize;
-    let mut dotnet_bytes = 0u64;
-    let mut dotnet_count = 0usize;
-    let mut python_bytes = 0u64;
-    let mut python_count = 0usize;
-    let mut java_bytes = 0u64;
-    let mut java_count = 0usize;
-    let mut other_bytes = 0u64;
-    let mut other_count = 0usize;
-
+    let mut eco_map: std::collections::BTreeMap<ProjectType, (u64, usize)> =
+        std::collections::BTreeMap::new();
     let mut stale_bytes = 0u64;
     let mut active_bytes = 0u64;
 
     for &idx in &app.selected_indices {
         if let Some(p) = app.projects.get(idx) {
             let p_bytes = p.total_reclaimable_bytes();
-            match p.project_type {
-                ProjectType::Rust => {
-                    rust_bytes += p_bytes;
-                    rust_count += 1;
-                }
-                ProjectType::Node => {
-                    node_bytes += p_bytes;
-                    node_count += 1;
-                }
-                ProjectType::Dotnet => {
-                    dotnet_bytes += p_bytes;
-                    dotnet_count += 1;
-                }
-                ProjectType::Python => {
-                    python_bytes += p_bytes;
-                    python_count += 1;
-                }
-                ProjectType::Java => {
-                    java_bytes += p_bytes;
-                    java_count += 1;
-                }
-                _ => {
-                    other_bytes += p_bytes;
-                    other_count += 1;
-                }
-            }
+            let entry = eco_map.entry(p.project_type.clone()).or_insert((0, 0));
+            entry.0 += p_bytes;
+            entry.1 += 1;
+
             if let Some(ref git) = p.git_info {
                 if git.status == GitStatus::Stale && !git.is_dirty {
                     stale_bytes += p_bytes;
@@ -1211,117 +1184,42 @@ fn draw_gauge(f: &mut Frame, app: &TuiApp, area: Rect) {
             Style::default().fg(Palette::TEXT_MUTED),
         )));
     } else {
-        if rust_count > 0 {
-            lines.push(Line::from(vec![
-                Span::styled("  🦀 Rust:    ", Style::default().fg(Palette::ORANGE)),
-                Span::styled(
-                    format_bytes(rust_bytes),
-                    Style::default()
-                        .fg(Palette::TEXT_MAIN)
-                        .add_modifier(Modifier::BOLD),
-                ),
-                Span::styled(
-                    format!(" ({} project(s))", rust_count),
-                    Style::default().fg(Palette::TEXT_MUTED),
-                ),
-            ]));
-        }
-        if node_count > 0 {
-            lines.push(Line::from(vec![
-                Span::styled(
-                    "  🟢 Node:    ",
-                    Style::default().fg(Palette::SUCCESS_GREEN),
-                ),
-                Span::styled(
-                    format_bytes(node_bytes),
-                    Style::default()
-                        .fg(Palette::TEXT_MAIN)
-                        .add_modifier(Modifier::BOLD),
-                ),
-                Span::styled(
-                    format!(" ({} project(s))", node_count),
-                    Style::default().fg(Palette::TEXT_MUTED),
-                ),
-            ]));
-        }
-        if dotnet_count > 0 {
-            lines.push(Line::from(vec![
-                Span::styled("  🟣 .NET:    ", Style::default().fg(Palette::PURPLE)),
-                Span::styled(
-                    format_bytes(dotnet_bytes),
-                    Style::default()
-                        .fg(Palette::TEXT_MAIN)
-                        .add_modifier(Modifier::BOLD),
-                ),
-                Span::styled(
-                    format!(" ({} project(s))", dotnet_count),
-                    Style::default().fg(Palette::TEXT_MUTED),
-                ),
-            ]));
-        }
-        if python_count > 0 {
-            lines.push(Line::from(vec![
-                Span::styled("  🐍 Python:  ", Style::default().fg(Palette::CYAN)),
-                Span::styled(
-                    format_bytes(python_bytes),
-                    Style::default()
-                        .fg(Palette::TEXT_MAIN)
-                        .add_modifier(Modifier::BOLD),
-                ),
-                Span::styled(
-                    format!(" ({} project(s))", python_count),
-                    Style::default().fg(Palette::TEXT_MUTED),
-                ),
-            ]));
-        }
-        if java_count > 0 {
-            lines.push(Line::from(vec![
-                Span::styled(
-                    "  ☕ Java:    ",
-                    Style::default().fg(Palette::WARNING_YELLOW),
-                ),
-                Span::styled(
-                    format_bytes(java_bytes),
-                    Style::default()
-                        .fg(Palette::TEXT_MAIN)
-                        .add_modifier(Modifier::BOLD),
-                ),
-                Span::styled(
-                    format!(" ({} project(s))", java_count),
-                    Style::default().fg(Palette::TEXT_MUTED),
-                ),
-            ]));
-        }
-        if other_count > 0 {
-            lines.push(Line::from(vec![
-                Span::styled(
-                    "  📦 Other:   ",
-                    Style::default().fg(Palette::WARNING_YELLOW),
-                ),
-                Span::styled(
-                    format_bytes(other_bytes),
-                    Style::default()
-                        .fg(Palette::TEXT_MAIN)
-                        .add_modifier(Modifier::BOLD),
-                ),
-                Span::styled(
-                    format!(" ({} project(s))", other_count),
-                    Style::default().fg(Palette::TEXT_MUTED),
-                ),
-            ]));
+        for (pt, (bytes, count)) in &eco_map {
+            if *count > 0 {
+                let style = project_type_style(pt);
+                let label = format!("  {:<10}", format!("{}:", pt));
+                lines.push(Line::from(vec![
+                    Span::styled(label, style),
+                    Span::styled(
+                        format_bytes(*bytes),
+                        Style::default()
+                            .fg(Palette::TEXT_MAIN)
+                            .add_modifier(Modifier::BOLD),
+                    ),
+                    Span::styled(
+                        format!(" ({} project(s))", count),
+                        Style::default().fg(Palette::TEXT_MUTED),
+                    ),
+                ]));
+            }
         }
 
         // Safety summary
         lines.push(Line::from(vec![
-            Span::styled("  Safety:     ", Style::default().fg(Palette::CYAN)),
             Span::styled(
-                format!("● Stale: {}", format_bytes(stale_bytes)),
+                "  Safety:   ",
+                Style::default()
+                    .fg(Palette::CYAN)
+                    .add_modifier(Modifier::BOLD),
+            ),
+            Span::styled(
+                format!("Stale: {}", format_bytes(stale_bytes)),
                 Style::default()
                     .fg(Palette::SUCCESS_GREEN)
                     .add_modifier(Modifier::BOLD),
             ),
             Span::styled(
-                format!("  ▲ Active: {}", format_bytes(active_bytes)),
+                format!("  Active: {}", format_bytes(active_bytes)),
                 if active_bytes > 0 {
                     Style::default()
                         .fg(Palette::WARNING_YELLOW)

@@ -48,7 +48,7 @@ pub fn print_projects_table(projects: &[DiscoveredProject]) {
         ),
         pad_str(
             &style("TYPE").bold().underlined().to_string(),
-            8,
+            10,
             Alignment::Left,
             None
         ),
@@ -125,7 +125,7 @@ pub fn print_projects_table(projects: &[DiscoveredProject]) {
         println!(
             "{} {} {} {} {}",
             pad_str(&styled_path.to_string(), 38, Alignment::Left, None),
-            pad_str(&styled_type.to_string(), 8, Alignment::Left, None),
+            pad_str(&styled_type.to_string(), 10, Alignment::Left, None),
             pad_str(&styled_commit.to_string(), 15, Alignment::Left, None),
             pad_str(&styled_status.to_string(), 18, Alignment::Left, None),
             pad_str(&styled_size.to_string(), 12, Alignment::Right, None)

@@ -1,14 +1,28 @@
+pub mod cpp;
 pub mod dotnet;
+pub mod elixir;
+pub mod flutter;
+pub mod go;
 pub mod java;
 pub mod node;
+pub mod php;
 pub mod python;
+pub mod ruby;
 pub mod rust;
+pub mod swift;
 
+use self::cpp::CppDetector;
 use self::dotnet::DotnetDetector;
+use self::elixir::ElixirDetector;
+use self::flutter::FlutterDetector;
+use self::go::GoDetector;
 use self::java::JavaDetector;
 use self::node::NodeDetector;
+use self::php::PhpDetector;
 use self::python::PythonDetector;
+use self::ruby::RubyDetector;
 use self::rust::RustDetector;
+use self::swift::SwiftDetector;
 use crate::core::traits::ProjectDetector;
 use std::path::Path;
 
@@ -35,6 +49,13 @@ impl DetectorRegistry {
             .register(Box::new(PythonDetector::new()))
             .register(Box::new(DotnetDetector::new()))
             .register(Box::new(JavaDetector::new()))
+            .register(Box::new(GoDetector::new()))
+            .register(Box::new(FlutterDetector::new()))
+            .register(Box::new(PhpDetector::new()))
+            .register(Box::new(RubyDetector::new()))
+            .register(Box::new(CppDetector::new()))
+            .register(Box::new(SwiftDetector::new()))
+            .register(Box::new(ElixirDetector::new()))
     }
 
     pub fn for_type(filter: &str) -> Result<Self, String> {
@@ -49,8 +70,15 @@ impl DetectorRegistry {
                 Ok(Self::new().register(Box::new(DotnetDetector::new())))
             }
             "java" | "jvm" => Ok(Self::new().register(Box::new(JavaDetector::new()))),
+            "go" | "golang" => Ok(Self::new().register(Box::new(GoDetector::new()))),
+            "flutter" | "dart" => Ok(Self::new().register(Box::new(FlutterDetector::new()))),
+            "php" | "composer" => Ok(Self::new().register(Box::new(PhpDetector::new()))),
+            "ruby" | "rb" | "rails" => Ok(Self::new().register(Box::new(RubyDetector::new()))),
+            "cpp" | "c" | "c++" | "cmake" => Ok(Self::new().register(Box::new(CppDetector::new()))),
+            "swift" | "apple" | "xcode" => Ok(Self::new().register(Box::new(SwiftDetector::new()))),
+            "elixir" | "ex" | "mix" => Ok(Self::new().register(Box::new(ElixirDetector::new()))),
             other => Err(format!(
-                "Unknown project type '{}'. Available types: all, rust, node, python, dotnet, java",
+                "Unknown project type '{}'. Available types: all, rust, node, python, dotnet, java, go, flutter, php, ruby, cpp, swift, elixir",
                 other
             )),
         }

@@ -1,13 +1,20 @@
-﻿use std::path::{Path, PathBuf};
+use std::path::{Path, PathBuf};
 
 #[allow(dead_code)]
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum ProjectType {
     Rust,
     Node,
     Dotnet,
     Python,
     Java,
+    Go,
+    Php,
+    Ruby,
+    Cpp,
+    Flutter,
+    Swift,
+    Elixir,
     Custom(String),
 }
 
@@ -19,6 +26,13 @@ impl std::fmt::Display for ProjectType {
             ProjectType::Dotnet => write!(f, ".NET"),
             ProjectType::Python => write!(f, "Python"),
             ProjectType::Java => write!(f, "Java"),
+            ProjectType::Go => write!(f, "Go"),
+            ProjectType::Php => write!(f, "PHP"),
+            ProjectType::Ruby => write!(f, "Ruby"),
+            ProjectType::Cpp => write!(f, "C/C++"),
+            ProjectType::Flutter => write!(f, "Flutter"),
+            ProjectType::Swift => write!(f, "Swift"),
+            ProjectType::Elixir => write!(f, "Elixir"),
             ProjectType::Custom(s) => write!(f, "{}", s),
         }
     }
