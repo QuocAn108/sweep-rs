@@ -16,12 +16,17 @@ pub fn compute_dir_size(path: &Path) -> u64 {
         .follow_links(false)
         .into_iter()
         .filter_map(|e| e.ok())
-        .filter(|e| e.file_type.is_file())
-        .map(|e| {
-            if let Ok(meta) = e.metadata() {
-                allocated_size(meta.len())
+        .filter_map(|e| {
+            if e.file_type.is_file() {
+                e.metadata().ok().map(|m| allocated_size(m.len()))
+            } else if let Ok(meta) = e.metadata() {
+                if meta.is_file() {
+                    Some(allocated_size(meta.len()))
+                } else {
+                    None
+                }
             } else {
-                0
+                None
             }
         })
         .sum()

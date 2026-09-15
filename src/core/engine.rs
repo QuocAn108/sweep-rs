@@ -89,7 +89,7 @@ impl ScanEngine {
             .skip_hidden(false)
             .process_read_dir(move |_depth, _path, _read_dir_state, children| {
                 for entry in children.iter_mut().flatten() {
-                    if entry.file_type.is_dir()
+                    if (entry.file_type.is_dir() || entry.path().is_dir())
                         && let Some(name) = entry.file_name.to_str()
                         && PRUNE_DIRS.contains(&name)
                     {
@@ -106,7 +106,7 @@ impl ScanEngine {
                 Err(_) => continue,
             };
 
-            if entry.file_type.is_dir() {
+            if entry.file_type.is_dir() || entry.path().is_dir() {
                 let current_dirs = dirs_count_clone.fetch_add(1, Ordering::Relaxed) + 1;
                 if let Some(ref cb) = on_dir_inspected
                     && current_dirs.is_multiple_of(50)
